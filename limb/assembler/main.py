@@ -18,6 +18,11 @@ def assemble(filenames):
 def main():
   filenames = sys.argv[1:]
   messages = assemble(filenames)
+  if messages:
+    message_to_str = lambda message: ':'.join(message[2]) if message.file_name else "" + ": ".join(message[2:])
+    message_strs = [message_to_str(i) for i in messages]
+    print(f"Assembler messages:")
+    print('\n'.join(messages_strs))
 
 if __name__ == "__main__":
   main()
