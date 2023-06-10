@@ -7,6 +7,24 @@ instruction = namedtuple("instruction", ["opcode", "data"])
 
 assembler_message = namedtuple("assembler_message", ["file_name", "line_number", "type", "text"])
 
+instruction_conditions = {
+  "eq": 0b0000,
+  "ne": 0b0001,
+  "cs": 0b0010,
+  "cc": 0b0011,
+  "mi": 0b0100,
+  "pl": 0b0101,
+  "vs": 0b0110,
+  "vc": 0b0111,
+  "hi": 0b1000,
+  "ls": 0b1001,
+  "ge": 0b1010,
+  "lt": 0b1011,
+  "gt": 0b1100,
+  "le": 0b1101,
+  "al": 0b1110
+}
+
 def assemble(filenames):
   messages = []
   for filename in filenames:
