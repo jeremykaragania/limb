@@ -8,8 +8,6 @@ instruction = namedtuple("instruction", ["opcode", "data"])
 
 assembler_message = namedtuple("assembler_message", ["file_name", "line_number", "type", "text"])
 
-instructions = {}
-
 instruction_conditions = {
   "eq": 0b0000,
   "ne": 0b0001,
@@ -28,9 +26,9 @@ instruction_conditions = {
   "al": 0b1110
 }
 
-opcode_re = f"(?P<opcode>{'|'.join(instructions)})?"
-condition_re = f"(?P<condition>{'|'.join(instruction_conditions)})?"
-suffix_re = "(?P<suffix>s)?"
+suffix_re = "(?P<s>s)?"
+
+condition_re = f"(?P<cond>{'|'.join(instruction_conditions)})?"
 
 def assemble(filenames):
   messages = []
