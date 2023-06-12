@@ -57,11 +57,9 @@ def assemble(filenames):
       messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
       break
     else:
-      for i in f:
-        i = i.split()
-        opcode = i[0]
-        data = i[1:]
-        i = instruction(opcode.lower(), [j.rstrip(',').lower() for j in data])
+      for line, i in enumerate(f):
+        opcode, data = i.split(maxsplit=1)
+        i = instruction(opcode.lower(), data.rstrip().lower())
   return messages
 
 def main():
