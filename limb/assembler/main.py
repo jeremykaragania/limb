@@ -30,6 +30,24 @@ suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(instruction_conditions)})?"
 
+imm_re = lambda group: f"(?P<{group}_imm>[^\s]*)"
+
+reg_re = lambda group: f"r(?P<{group}_reg>{['|'.join([str(i) for i in range(14)])]})"
+
+shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s+{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b32')})"
+
+oprnd2_res = (
+  shift_re("lsl"),
+  shift_re("lsr"),
+  shift_re("asr"),
+  shift_re("ror"),
+  f"{reg_re('rrx')}\s+rrx",
+  f"{reg_re('rm')}",
+  f"{imm_re('b32')}"
+)
+
+oprnd2_re = f"(?P<oprnd2>{'|'.join(oprnd2_res)})"
+
 def assemble(filenames):
   messages = []
   for filename in filenames:
