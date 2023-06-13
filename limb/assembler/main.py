@@ -34,19 +34,19 @@ imm_re = lambda group: f"(?P<{group}_imm>[^\s]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{['|'.join([str(i) for i in range(14)])]})"
 
-shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s+{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b32')})"
+shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b32')})"
 
 oprnd2_res = (
-  shift_re("lsl"),
-  shift_re("lsr"),
-  shift_re("asr"),
-  shift_re("ror"),
-  f"{reg_re('rrx')}\s+rrx",
-  f"{reg_re('rm')}",
-  f"{imm_re('b32')}"
+  f"(?P<lsl>{shift_re('lsl')})",
+  f"(?P<lsr>{shift_re('lsr')})",
+  f"(?P<asr>{shift_re('asr')})",
+  f"(?P<ror>{shift_re('ror')})",
+  f"(?P<rrx>{reg_re('rrx')}\s+rrx)",
+  f"(?P<reg>{reg_re('rm')})",
+  f"(?P<imm>{imm_re('b32')})"
 )
 
-oprnd2_re = f"(?P<oprnd2>{'|'.join(oprnd2_res)})"
+oprnd2_re = f"(?:{'|'.join(oprnd2_res)})"
 
 def assemble(filenames):
   messages = []
