@@ -8,7 +8,11 @@ instruction = namedtuple("instruction", ["opcode", "data"])
 
 assembler_message = namedtuple("assembler_message", ["file_name", "line_number", "type", "text"])
 
-instruction_conditions = {
+enc_opcode = {
+  "mov": "1101",
+}
+
+enc_condition = {
   "eq": "0000",
   "ne": "0001",
   "cs": "0010",
@@ -26,27 +30,67 @@ instruction_conditions = {
   "al": "1110"
 }
 
+enc_reg = {str(i):"{:04b}".format(i) for i in range(14)}
+
+def enc_shift(x, y):
+  key = list(x)[0]
+  ret = ""
+  if f"{key}_b5_imm" in x:
+    ret = "{:05b}".format(int(x[f"{key}_b5_imm"])) + y[1:]
+  else:
+    ret = enc_reg[x[f"{key}_rs_reg"]] + y
+  ret += enc_reg[x[f"{key}_rm_reg"]]
+  return ret
+
+enc_oprnd2 = {
+  "lsl": lambda x: enc_shift(x, "0001"),
+  "lsr": lambda x: enc_shift(x, "0011"),
+  "asr": lambda x: enc_shift(x, "0101"),
+  "ror": lambda x: enc_shift(x, "0111"),
+  "rrx": lambda x: "00000110" + enc_reg[x[f"{list(x)[0]}_reg"]],
+  "reg": lambda x: enc_reg[x["rm_reg"]],
+  "imm": lambda x: "{:032b}".format(x["{list(x)[0]}_imm"])
+}
+
+def enc_proc(groups):
+  cond = enc_condition[groups.opcode["cond"]] if "cond" in groups.opcode else enc_condition["al"]
+  opcode = enc_opcode[groups.opcode["opcode"]]
+  s = '1' if 's' in groups.opcode else '0'
+  regs = {
+    "rn_reg": "0000",
+    "rd_reg": "0000"
+  }
+  for i in regs:
+    if i in groups.data:
+      regs[i] = enc_reg[groups.data[i]]
+      del groups.data[i]
+  oprnd2_type = list(groups.data)[0]
+  oprnd2 = enc_oprnd2[oprnd2_type](groups.data)
+  return cond + "001" + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+
 suffix_re = "(?P<s>s)?"
 
-condition_re = f"(?P<cond>{'|'.join(instruction_conditions)})?"
+condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
 
 imm_re = lambda group: f"(?P<{group}_imm>[^\s]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{['|'.join([str(i) for i in range(14)])]})"
 
-shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b32')})"
+shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b5')})"
 
-oprnd2_res = (
+oprnd2_re = (
   f"(?P<lsl>{shift_re('lsl')})",
   f"(?P<lsr>{shift_re('lsr')})",
   f"(?P<asr>{shift_re('asr')})",
   f"(?P<ror>{shift_re('ror')})",
-  f"(?P<rrx>{reg_re('rrx')}\s+rrx)",
+  f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
   f"(?P<reg>{reg_re('rm')})",
   f"(?P<imm>{imm_re('b32')})"
 )
 
-oprnd2_re = f"(?:{'|'.join(oprnd2_res)})"
+enc_instruction = {
+  instruction(re.compile(f"^(?P<opcode>mov){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc
+}
 
 def assemble(filenames):
   messages = []
@@ -60,6 +104,18 @@ def assemble(filenames):
       for line, i in enumerate(f):
         opcode, data = i.split(maxsplit=1)
         i = instruction(opcode.lower(), data.rstrip().lower())
+        for i_re in enc_instruction:
+          opcode_match = i_re.opcode.match(i.opcode)
+          if opcode_match:
+            data_match = i_re.data.match(i.data)
+            if data_match:
+              opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
+              data_groups = {j:k for j, k in data_match.groupdict().items() if k}
+              i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
+            else:
+              messages.append(assembler_message(filename, line, "Error", f"no such instruction data: \"{data.rstrip()}\""))
+          else:
+            messages.append(assembler_message(filename, line, "Error", f"no such instruction opcode: \"{opcode}\""))
   return messages
 
 def main():
