@@ -102,7 +102,12 @@ def assemble(filenames):
       break
     else:
       for line, i in enumerate(f):
-        opcode, data = i.split(maxsplit=1)
+        opcode = ""
+        data = ""
+        try:
+          opcode, data = i.split(maxsplit=1)
+        except ValueError:
+          opcode = i
         i = instruction(opcode.lower(), data.rstrip().lower())
         for i_re in enc_instruction:
           opcode_match = i_re.opcode.match(i.opcode)
