@@ -49,7 +49,7 @@ enc_oprnd2 = {
   "ror": lambda x: enc_shift(x, "0111"),
   "rrx": lambda x: "00000110" + enc_reg[x[f"{list(x)[0]}_reg"]],
   "reg": lambda x: enc_reg[x["rm_reg"]],
-  "imm": lambda x: "{:032b}".format(x["{list(x)[0]}_imm"])
+  "imm": lambda x: "{:012b}".format(int(x["b32_imm"]))
 }
 
 def enc_proc(groups):
