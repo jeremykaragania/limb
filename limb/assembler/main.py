@@ -97,7 +97,7 @@ def assemble(filenames, objfile="a.out"):
   for filename in filenames:
     try:
       f = list(open(filename, 'r'))
-    except FileNotFoundError:
+    except:
       messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
       break
     else:
