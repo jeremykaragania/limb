@@ -129,8 +129,16 @@ def assemble(filenames, objfile="a.out"):
   return messages
 
 def main():
-  filenames = sys.argv[1:]
-  messages = assemble(filenames)
+  args = sys.argv[1:]
+  filenames = []
+  objfile = "a.out"
+  for i, j in enumerate(args):
+    if j == "-o":
+      objfile = args[i+1]
+      del args[i+1]
+    else:
+      filenames.append(j)
+  messages = assemble(set(filenames), objfile)
   if messages:
     message_to_str = lambda message: (f"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
     message_strs = [message_to_str(i) for i in messages]
