@@ -92,7 +92,7 @@ enc_instruction = {
   instruction(re.compile(f"^(?P<opcode>mov){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc
 }
 
-def assemble(filenames):
+def assemble(filenames, objfile="a.out"):
   messages = []
   for filename in filenames:
     try:
@@ -101,6 +101,7 @@ def assemble(filenames):
       messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
       break
     else:
+      obj = bytearray()
       for line, i in enumerate(f):
         opcode = ""
         data = ""
@@ -114,13 +115,17 @@ def assemble(filenames):
           if opcode_match:
             data_match = i_re.data.match(i.data)
             if data_match:
-              opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
-              data_groups = {j:k for j, k in data_match.groupdict().items() if k}
-              i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
+              if not messages:
+                opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
+                data_groups = {j:k for j, k in data_match.groupdict().items() if k}
+                i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
+                obj.extend(bytes().fromhex(hex(int(i_enc, 2))[2:])[::-1])
             else:
               messages.append(assembler_message(filename, line, "Error", f"no such instruction data: \"{data.rstrip()}\""))
           else:
             messages.append(assembler_message(filename, line, "Error", f"no such instruction opcode: \"{opcode}\""))
+          if not messages:
+            open(objfile, "wb").write(obj)
   return messages
 
 def main():
