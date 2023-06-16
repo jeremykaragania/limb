@@ -30,13 +30,13 @@ enc_condition = {
   "al": "1110"
 }
 
-enc_reg = {str(i):"{:04b}".format(i) for i in range(14)}
+enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 
 def enc_shift(x, y):
   key = list(x)[0]
   ret = ""
   if f"{key}_b5_imm" in x:
-    ret = "{:05b}".format(int(x[f"{key}_b5_imm"])) + y[1:]
+    ret = f"{int(x[key+'_b5_imm']):05b}" + y[1:]
   else:
     ret = enc_reg[x[f"{key}_rs_reg"]] + y
   ret += enc_reg[x[f"{key}_rm_reg"]]
@@ -49,7 +49,7 @@ enc_oprnd2 = {
   "ror": lambda x: enc_shift(x, "0111"),
   "rrx": lambda x: "00000110" + enc_reg[x[f"{list(x)[0]}_reg"]],
   "reg": lambda x: enc_reg[x["rm_reg"]],
-  "imm": lambda x: "{:012b}".format(int(x["b32_imm"]))
+  "imm": lambda x: f"{int(x['b32_imm']):012b}"
 }
 
 def enc_proc(groups):
