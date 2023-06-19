@@ -110,6 +110,7 @@ def assemble(filenames, objfile="a.out"):
         except ValueError:
           opcode = i
         i = instruction(opcode.lower(), data.rstrip().lower())
+        opcode_match = None
         for i_re in enc_instruction:
           opcode_match = i_re.opcode.match(i.opcode)
           if opcode_match:
@@ -122,10 +123,11 @@ def assemble(filenames, objfile="a.out"):
                 obj.extend(bytes().fromhex(hex(int(i_enc, 2))[2:])[::-1])
             else:
               messages.append(assembler_message(filename, line, "Error", f"no such instruction data: \"{data.rstrip()}\""))
-          else:
-            messages.append(assembler_message(filename, line, "Error", f"no such instruction opcode: \"{opcode}\""))
-          if not messages:
-            open(objfile, "wb").write(obj)
+            break
+        if not opcode_match:
+          messages.append(assembler_message(filename, line, "Error", f"no such instruction opcode: \"{opcode}\""))
+      if not messages:
+        open(objfile, "wb").write(obj)
   return messages
 
 def main():
