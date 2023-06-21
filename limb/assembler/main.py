@@ -75,7 +75,7 @@ condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
 
 imm_re = lambda group: f"(?P<{group}_imm>[^\s]*)"
 
-reg_re = lambda group: f"r(?P<{group}_reg>{['|'.join([str(i) for i in range(14)])]})"
+reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(14)])})"
 
 shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b5')})"
 
