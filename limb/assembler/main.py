@@ -10,6 +10,7 @@ assembler_message = namedtuple("assembler_message", ["file_name", "line_number",
 
 enc_opcode = {
   "mov": "1101",
+  "mvn": "1111"
 }
 
 enc_condition = {
@@ -89,7 +90,8 @@ oprnd2_re = (
 )
 
 enc_instruction = {
-  instruction(re.compile(f"^(?P<opcode>mov){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc
+  instruction(re.compile(f"^(?P<opcode>mov){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc,
+  instruction(re.compile(f"^(?P<opcode>mvn){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc
 }
 
 def assemble(filenames, objfile="a.out"):
