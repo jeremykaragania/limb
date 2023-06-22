@@ -9,7 +9,7 @@ module random_access_memory(
   input [31:0] din;
   output reg [31:0] dout;
   input rw;
-  reg [31:0] mem [0:128];
+  reg [31:0] mem [0:8191];
 
   always @ (posedge clk) begin
     if (rw) begin
