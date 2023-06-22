@@ -13,10 +13,10 @@ module random_access_memory(
 
   always @ (posedge clk) begin
     if (rw) begin
-      dout = mem[a];
+      mem[a] = din;
     end
     else begin
-      mem[a] = din;
+      dout = mem[a];
     end
   end
 endmodule
