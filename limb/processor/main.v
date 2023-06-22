@@ -11,6 +11,10 @@ module random_access_memory(
   input rw;
   reg [31:0] mem [0:8191];
 
+  initial begin
+    $readmemh("boot.txt", mem);
+  end
+
   always @ (posedge clk) begin
     if (rw) begin
       mem[a] = din;
