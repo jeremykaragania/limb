@@ -122,7 +122,7 @@ def assemble(filenames, objfile="a.out"):
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
                 data_groups = {j:k for j, k in data_match.groupdict().items() if k}
                 i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
-                obj.extend(bytes().fromhex(hex(int(i_enc, 2))[2:])[::-1])
+                obj.extend(bytes().fromhex(hex(int(i_enc, 2))[2:]))
             else:
               messages.append(assembler_message(filename, line, "Error", f"no such instruction data: \"{data.rstrip()}\""))
             break
