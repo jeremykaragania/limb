@@ -24,3 +24,25 @@ module random_access_memory(
     end
   end
 endmodule
+
+module control_unit(
+  clk
+  );
+  input clk;
+  reg [31:0] a;
+  reg [31:0] din;
+  wire [31:0] dout;
+  reg rw;
+  random_access_memory ram(.clk(clk), .a(a), .din(din), .dout(dout), .rw(rw));
+  wire [3:0] opcode = dout[25:21];
+  reg [31:0] r [0:30];
+
+  initial begin
+    r[15] = 0;
+  end
+
+  always @ (posedge clk) begin
+    a <= r[15];
+    r[15] <= r[15] + 1;
+  end
+endmodule
