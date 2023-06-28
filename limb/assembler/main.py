@@ -10,7 +10,21 @@ assembler_message = namedtuple("assembler_message", ["file_name", "line_number",
 
 enc_opcode = {
   "mov": "1101",
-  "mvn": "1111"
+  "mvn": "1111",
+  "add": "0100",
+  "adc": "0101",
+  "sub": "0010",
+  "sbc": "0110",
+  "rsb": "0011",
+  "rsc": "0111",
+  "cmp": "1010",
+  "cmn": "1011",
+  "tst": "1000",
+  "teq": "1001",
+  "and": "0000",
+  "eor": "0001",
+  "orr": "1100",
+  "bic": "1110"
 }
 
 enc_condition = {
@@ -79,19 +93,35 @@ reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(14)])
 
 shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b5')})"
 
-oprnd2_re = (
+oprnd2_re = '|'.join((
   f"(?P<lsl>{shift_re('lsl')})",
   f"(?P<lsr>{shift_re('lsr')})",
   f"(?P<asr>{shift_re('asr')})",
   f"(?P<ror>{shift_re('ror')})",
   f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
   f"(?P<reg>{reg_re('rm')})",
-  f"(?P<imm>{imm_re('b32')})"
-)
+  f"(?P<imm>{imm_re('b32')})"))
+
+opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in optional else ''}{condition_re if 'cond' in optional else ''}$"
+
+data_re = lambda res: "^" + '\s*,\s*'.join(res) + "$"
 
 enc_instruction = {
-  instruction(re.compile(f"^(?P<opcode>mov){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc,
-  instruction(re.compile(f"^(?P<opcode>mvn){suffix_re}{condition_re}$"), re.compile(f"^{reg_re('rd')}\s*,\s*(?:{'|'.join(oprnd2_re)})$")): enc_proc
+  instruction(re.compile(opcode_re("mov", ("s", "cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("mvn", ("s", "cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("add", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("adc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("sub", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("rsb", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("rsc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("cmp", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("cmn", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("tst", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("teq", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("and", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
 }
 
 def preprocess(messages, filenames):
