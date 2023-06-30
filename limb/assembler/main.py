@@ -128,13 +128,17 @@ def preprocess(messages, filenames):
   files = {}
   for filename in filenames:
     try:
-      f = list(open(filename, 'r'))
+      f = open(filename, 'r').read()
     except:
       messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
       return []
     else:
+      f = re.sub("\/\*(?:.|\n)*\*\/", '', f)
+      f = f.split('\n')
       files[filename] = []
       for line, i in enumerate(f):
+        if not i or i.isspace():
+          continue
         opcode = ""
         data = ""
         try:
