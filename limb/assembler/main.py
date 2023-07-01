@@ -81,7 +81,8 @@ def enc_proc(groups):
       del groups.data[i]
   oprnd2_type = list(groups.data)[0]
   oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
-  return cond + "001" + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+  oprnd2_type = "0" if oprnd2_type == "reg" else "1"
+  return cond + "00" + oprnd2_type + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
 suffix_re = "(?P<s>s)?"
 
