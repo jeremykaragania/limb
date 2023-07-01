@@ -64,7 +64,7 @@ enc_oprnd2 = {
   "ror": lambda x: enc_shift(x, "0111"),
   "rrx": lambda x: "00000110" + enc_reg[x[f"{list(x)[0]}_reg"]],
   "reg": lambda x: enc_reg[x["rm_reg"]],
-  "imm": lambda x: f"{int(x['b32_imm']):012b}"
+  "imm": lambda x: f"{int(x['b32_imm']):b}"
 }
 
 def enc_proc(groups):
@@ -80,7 +80,7 @@ def enc_proc(groups):
       regs[i] = enc_reg[groups.data[i]]
       del groups.data[i]
   oprnd2_type = list(groups.data)[0]
-  oprnd2 = enc_oprnd2[oprnd2_type](groups.data)
+  oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
   return cond + "001" + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
 suffix_re = "(?P<s>s)?"
