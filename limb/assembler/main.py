@@ -24,7 +24,9 @@ enc_opcode = {
   "and": "0000",
   "eor": "0001",
   "orr": "1100",
-  "bic": "1110"
+  "bic": "1110",
+  "mul": "0000",
+  "mla": "0001"
 }
 
 enc_condition = {
@@ -84,6 +86,22 @@ def enc_proc(groups):
   oprnd2_type = "0" if oprnd2_type == "reg" else "1"
   return cond + "00" + oprnd2_type + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
+def enc_mul(groups):
+  cond = enc_condition[groups.opcode["cond"]] if "cond" in groups.opcode else enc_condition["al"]
+  opcode = enc_opcode[groups.opcode["opcode"]]
+  s = '1' if 's' in groups.opcode else '0'
+  regs = {
+    "rn_reg": "0000",
+    "rd_reg": "0000",
+    "rs_reg": "0000",
+    "rm_reg": "0000"
+  }
+  for i in regs:
+    if i in groups.data:
+      regs[i] = enc_reg[groups.data[i]]
+      del groups.data[i]
+  return cond + "000" + opcode + s + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+
 suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
@@ -123,6 +141,8 @@ enc_instruction = {
   instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("mul", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"))))): enc_mul,
+  instruction(re.compile(opcode_re("mla", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn"))))): enc_mul,
 }
 
 def preprocess(messages, filenames):
