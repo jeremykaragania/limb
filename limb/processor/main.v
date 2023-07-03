@@ -41,18 +41,19 @@ module control_unit(
   wire [31:0] instruction = ram_dout;
   wire [3:0] cond = instruction[31:28];
   wire oprnd2_type = instruction[25];
-  wire [3:0] rd = instruction[15:12];
   wire [3:0] rn = instruction[19:16];
+  wire [3:0] rd = instruction[15:12];
   wire [3:0] rs = instruction[11:8];
   wire [3:0] rm = instruction[3:0];
   wire [11:0] oprnd2 = instruction[11:0];
   wire [3:0] opcode = instruction[25:21];
   reg [3:0] alu_opcode;
-  reg [3:0] alu_destination;
+  reg [3:0]  alu_destinations [1:0];
   reg [31:0] alu_a;
   reg [31:0] alu_b;
   reg [31:0] alu_c;
-  wire [31:0] alu_result;
+  reg [31:0] alu_d;
+  wire [63:0] alu_result;
   arithmetic_logic_unit alu(
     .do_execute(do_execute),
     .do_mul(do_mul),
@@ -61,14 +62,15 @@ module control_unit(
     .a(alu_a),
     .b(alu_b),
     .c(alu_c),
+    .d(alu_d),
     .result(alu_result));
   reg [31:0] r [0:30];
   reg [31:0] cpsr;
   reg do_execute;
   reg do_mul;
   reg [2:0] do_writeback;
-  reg [31:0] source;
-  reg [3:0] destination;
+  reg [63:0] source;
+  reg [3:0] destinations [1:0];
 
   initial begin
     r[15] = 0;
@@ -158,64 +160,96 @@ module control_unit(
       do_mul <= 1;
       case (opcode)
         4'b0000: begin // mul
-          alu_destination <= rn;
+           alu_destinations[0] <= rn;
           alu_a <= r[rd];
           alu_b <= r[rs];
           do_writeback <= 1;
         end
         4'b0001: begin // mla
-          alu_destination <= rn;
+           alu_destinations[0] <= rn;
           alu_a <= r[rd];
           alu_b <= r[rs];
           alu_c <= r[rm];
           do_writeback <= 1;
+        end
+        4'b0100: begin // umull
+          alu_destinations[0] <= rd;
+          alu_destinations[1] <= rn;
+          alu_a <= r[rm];
+          alu_b <= r[rs];
+          do_writeback <= 3;
+        end
+        4'b0101: begin // umlal
+          alu_destinations[0] <= rd;
+          alu_destinations[1] <= rn;
+          alu_a <= r[rm];
+          alu_b <= r[rs];
+          alu_c <= r[rd];
+          alu_d <= r[rn];
+          do_writeback <= 3;
+        end
+        4'b0110: begin // smull
+          alu_destinations[0] <= rd;
+          alu_destinations[1] <= rn;
+          alu_a <= r[rm];
+          alu_b <= r[rs];
+          do_writeback <= 3;
+        end
+        4'b0111: begin // smlal
+          alu_destinations[0] <= rd;
+          alu_destinations[1] <= rn;
+          alu_a <= r[rm];
+          alu_b <= r[rs];
+          alu_c <= r[rd];
+          alu_d <= r[rn];
+          do_writeback <= 3;
         end
       endcase
     end
     else begin
       case (opcode)
         4'b1101: begin // mov
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1101: begin // mvn
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0100: begin // add
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0101: begin // adc
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0010: begin // sub
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0110: begin // sbc
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0011: begin // rsb
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0111: begin // rsc
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
@@ -241,25 +275,25 @@ module control_unit(
           do_writeback <= 2;
         end
         4'b0000: begin // and
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0001: begin // eor
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1100: begin // orr
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1110: begin // bic
-          alu_destination <= rd;
+           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
@@ -268,13 +302,18 @@ module control_unit(
     end
     if (do_writeback) begin
       source <= alu_result;
-      destination <= alu_destination;
+      destinations[0] <=  alu_destinations[0];
+      destinations[1] <=  alu_destinations[1];
       case (do_writeback)
         1: begin
-          r[destination] <= source;
+          r[destinations[0]] <= source[31:0];
         end
         2: begin
-          cpsr <= source;
+          cpsr <= source[31:0];
+        end
+        3: begin
+          r[destinations[0]] <= source[63:32];
+          r[destinations[1]] <= source[31:0];
         end
       endcase
     end
@@ -290,6 +329,7 @@ module arithmetic_logic_unit(
   a,
   b,
   c,
+  d,
   result);
   input do_execute;
   input do_mul;
@@ -298,7 +338,8 @@ module arithmetic_logic_unit(
   input [31:0] a;
   input [31:0] b;
   input [31:0] c;
-  output reg [31:0] result;
+  input [31:0] d;
+  output reg [63:0] result;
   reg [31:0] r [3:0];
 
   always @ (*) begin
@@ -310,6 +351,18 @@ module arithmetic_logic_unit(
           end
           4'b0001: begin // mla
             result = a * b + c;
+          end
+          4'b0100: begin // umull
+            result = a * b;
+          end
+          4'b0101: begin // umlal
+            result = a * b + {c, d};
+          end
+          4'b0110: begin // smull
+            result = $signed(a) * $signed(b);
+          end
+          4'b0111: begin // smlal
+            result = $signed(a) * $signed(b) + {c, d};
           end
         endcase
       end
