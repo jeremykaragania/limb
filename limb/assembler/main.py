@@ -19,11 +19,11 @@ enc_opcode = {
   "rsc": "0111",
   "cmp": "1010",
   "mul": "0000",
+  "mla": "0001",
   "umull": "0100",
   "umlal": "0101",
   "smull": "0110",
   "smlal": "0111",
-  "mla": "0001",
   "cmn": "1011",
   "tst": "1000",
   "teq": "1001",
@@ -92,8 +92,8 @@ def enc_proc(groups):
 
 def enc_mul(groups):
   regs = {
-    "rn_reg": "0000",
     "rd_reg": "0000",
+    "rn_reg": "0000",
     "rs_reg": "0000",
     "rm_reg": "0000"
   }
@@ -102,10 +102,9 @@ def enc_mul(groups):
 
 def enc_mul_long(groups):
   regs = {
-    "rn_reg": "0000",
     "rd_hi_reg": "0000",
     "rd_lo_reg": "0000",
-    "rm_reg": "0000",
+    "rn_reg": "0000",
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
@@ -144,10 +143,10 @@ enc_instruction = {
   instruction(re.compile(opcode_re("rsc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("mul", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"))))): enc_mul,
   instruction(re.compile(opcode_re("mla", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn"))))): enc_mul,
-  instruction(re.compile(opcode_re("umull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rs"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("umlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rs"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("smull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rs"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("smlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rs"))))): enc_mul_long,
+  instruction(re.compile(opcode_re("umull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
+  instruction(re.compile(opcode_re("umlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
+  instruction(re.compile(opcode_re("smull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
+  instruction(re.compile(opcode_re("smlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
   instruction(re.compile(opcode_re("cmp", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("cmn", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("tst", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
