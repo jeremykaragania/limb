@@ -53,6 +53,12 @@ enc_condition = {
 
 enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 
+def enc_regs(x, y):
+  for i in x:
+    if i in y:
+      x[i] = enc_reg[y[i]]
+      del y[i]
+
 def enc_shift(x, y):
   key = list(x)[0]
   ret = ""
@@ -74,42 +80,27 @@ enc_oprnd2 = {
 }
 
 def enc_proc(groups):
-  cond = enc_condition[groups.opcode["cond"]] if "cond" in groups.opcode else enc_condition["al"]
-  opcode = enc_opcode[groups.opcode["opcode"]]
-  s = '1' if 's' in groups.opcode else '0'
   regs = {
     "rn_reg": "0000",
     "rd_reg": "0000"
   }
-  for i in regs:
-    if i in groups.data:
-      regs[i] = enc_reg[groups.data[i]]
-      del groups.data[i]
+  enc_regs(regs, groups.data)
   oprnd2_type = list(groups.data)[0]
   oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
   oprnd2_type = "0" if oprnd2_type == "reg" else "1"
-  return cond + "00" + oprnd2_type + opcode + s + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+  return groups.opcode["cond"] + "00" + oprnd2_type + groups.opcode["opcode"] + groups.opcode["s"] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
 def enc_mul(groups):
-  cond = enc_condition[groups.opcode["cond"]] if "cond" in groups.opcode else enc_condition["al"]
-  opcode = enc_opcode[groups.opcode["opcode"]]
-  s = '1' if 's' in groups.opcode else '0'
   regs = {
     "rn_reg": "0000",
     "rd_reg": "0000",
     "rs_reg": "0000",
     "rm_reg": "0000"
   }
-  for i in regs:
-    if i in groups.data:
-      regs[i] = enc_reg[groups.data[i]]
-      del groups.data[i]
-  return cond + "000" + opcode + s + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+  enc_regs(regs, groups.data)
+  return groups.opcode["cond"] + "000" + groups.opcode["opcode"] + groups.opcode["s"] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
 
 def enc_mul_long(groups):
-  cond = enc_condition[groups.opcode["cond"]] if "cond" in groups.opcode else enc_condition["al"]
-  opcode = enc_opcode[groups.opcode["opcode"]]
-  s = '1' if 's' in groups.opcode else '0'
   regs = {
     "rn_reg": "0000",
     "rd_hi_reg": "0000",
@@ -117,11 +108,8 @@ def enc_mul_long(groups):
     "rm_reg": "0000",
     "rm_reg": "0000"
   }
-  for i in regs:
-    if i in groups.data:
-      regs[i] = enc_reg[groups.data[i]]
-      del groups.data[i]
-  return cond + "000" + opcode + s + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
+  enc_regs(regs, groups.data)
+  return groups.opcode["cond"] + "000" + groups.opcode["opcode"] + groups.opcode["s"] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
 
 suffix_re = "(?P<s>s)?"
 
@@ -207,6 +195,9 @@ def assemble(messages, files):
             if not messages:
               opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
               data_groups = {j:k for j, k in data_match.groupdict().items() if k}
+              opcode_groups["cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
+              opcode_groups["opcode"] = enc_opcode[opcode_groups["opcode"]]
+              opcode_groups["s"] = '1' if 's' in opcode_groups else '0'
               i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
               obj.append((f"{int(i_enc, 2):<04x}"))
           else:
