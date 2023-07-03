@@ -55,6 +55,7 @@ module control_unit(
   wire [31:0] alu_result;
   arithmetic_logic_unit alu(
     .do_execute(do_execute),
+    .do_mul(do_mul),
     .opcode(alu_opcode),
     .cpsr(cpsr),
     .a(alu_a),
@@ -64,6 +65,7 @@ module control_unit(
   reg [31:0] r [0:30];
   reg [31:0] cpsr;
   reg do_execute;
+  reg do_mul;
   reg [2:0] do_writeback;
   reg [31:0] source;
   reg [3:0] destination;
@@ -152,111 +154,118 @@ module control_unit(
       end
     endcase
     alu_opcode <= opcode;
-    case (opcode)
-      4'b1101: begin // mov
-        alu_destination <= rd;
-        alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b1101: begin // mvn
-        alu_destination <= rd;
-        alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0100: begin // add
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0101: begin // adc
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0010: begin // sub
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0110: begin // sbc
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0011: begin // rsb
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0111: begin // rsc
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b1010: begin // cmp
-        alu_a <= r[rd];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 2;
-      end
-      4'b1011: begin // cmn
-        alu_a <= r[rd];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 2;
-      end
-      4'b1000: begin // tst
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 2;
-      end
-      4'b1001: begin // teq
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 2;
-      end
-      4'b0000: begin // and
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0001: begin // eor
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b1100: begin // orr
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b1110: begin // bic
-        alu_destination <= rd;
-        alu_a <= r[rn];
-        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-        do_writeback <= 1;
-      end
-      4'b0000: begin // mul
-        alu_destination <= rn;
-        alu_a <= r[rd];
-        alu_b <= r[rs];
-        do_writeback <= 1;
-      end
-      4'b0001: begin // mla
-        alu_destination <= rn;
-        alu_a <= r[rd];
-        alu_b <= r[rs];
-        alu_c <= r[rm];
-        do_writeback <= 1;
-      end
-    endcase
+    if (!instruction[25] && instruction[4]) begin
+      do_mul <= 1;
+      case (opcode)
+        4'b0000: begin // mul
+          alu_destination <= rn;
+          alu_a <= r[rd];
+          alu_b <= r[rs];
+          do_writeback <= 1;
+        end
+        4'b0001: begin // mla
+          alu_destination <= rn;
+          alu_a <= r[rd];
+          alu_b <= r[rs];
+          alu_c <= r[rm];
+          do_writeback <= 1;
+        end
+      endcase
+    end
+    else begin
+      case (opcode)
+        4'b1101: begin // mov
+          alu_destination <= rd;
+          alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b1101: begin // mvn
+          alu_destination <= rd;
+          alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0100: begin // add
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0101: begin // adc
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0010: begin // sub
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0110: begin // sbc
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0011: begin // rsb
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0111: begin // rsc
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b1010: begin // cmp
+          alu_a <= r[rd];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 2;
+        end
+        4'b1011: begin // cmn
+          alu_a <= r[rd];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 2;
+        end
+        4'b1000: begin // tst
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 2;
+        end
+        4'b1001: begin // teq
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 2;
+        end
+        4'b0000: begin // and
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b0001: begin // eor
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b1100: begin // orr
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+        4'b1110: begin // bic
+          alu_destination <= rd;
+          alu_a <= r[rn];
+          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          do_writeback <= 1;
+        end
+      endcase
+    end
     if (do_writeback) begin
       source <= alu_result;
       destination <= alu_destination;
@@ -275,6 +284,7 @@ endmodule
 
 module arithmetic_logic_unit(
   do_execute,
+  do_mul,
   opcode,
   cpsr,
   a,
@@ -282,6 +292,7 @@ module arithmetic_logic_unit(
   c,
   result);
   input do_execute;
+  input do_mul;
   input [3:0] opcode;
   input [31:0] cpsr;
   input [31:0] a;
@@ -292,80 +303,86 @@ module arithmetic_logic_unit(
 
   always @ (*) begin
     if (do_execute) begin
-      case (opcode)
-        4'b1101: begin // mov
-          result = a;
-        end
-        4'b1111: begin // mvn
-          result = !a;
-        end
-        4'b0100: begin // add
-          result = a + b;
-        end
-        4'b0101: begin // adc
-          result = a + b + cpsr[29];
-        end
-        4'b0010: begin // sub
-          result = a - b;
-        end
-        4'b0110: begin // sbc
-          result = a - b - cpsr[29];
-        end
-        4'b0011: begin // rsb
-          result = a - b;
-        end
-        4'b0111: begin // rsc
-          result = a - b - cpsr[29];
-        end
-        4'b1010: begin // cmp
-          r[0] = a + ~b + 1;
-          r[1] = $signed(a) + $signed(~b) + 1;
-          result[31] = r[0][31];
-          result[30] = !r[0];
-          result[29] = r[0][30:0] != r[0];
-          result[28] = $signed(r[0][30:0]) != r[1];
-          result[27:0] = cpsr[27:0];
-        end
-        4'b1011: begin // cmn
-          r[0] = a + b + 1;
-          r[1] = $signed(a) + $signed(b) + 1;
-          result[31] = r[0][31];
-          result[30] = !r[0];
-          result[29] = r[0][30:0] != r[0];
-          result[28] = $signed(r[0][30:0]) != r[1];
-          result[27:0] = cpsr[27:0];
-        end
-        4'b1000: begin // tst
-          r[0] = a & b;
-          result[31] = r[0][31];
-          result[30] = !r[0];
-          result[29:0] = cpsr[29:0];
-        end
-        4'b1001: begin // teq
-          r[0] = a ^ b;
-          result[31] = r[0][31];
-          result[30] = !r[0];
-          result[29:0] = cpsr[29:0];
-        end
-        4'b0000: begin // and
-          result = a & b;
-        end
-        4'b0001: begin // eor
-          result = a ^ b;
-        end
-        4'b1100: begin // orr
-          result = a | b;
-        end
-        4'b1110: begin // bic
-          result = a & ~b;
-        end
-        4'b0000: begin // mul
-          result = a * b;
-        end
-        4'b0001: begin // mla
-          result = a * b + c;
-        end
-      endcase
+      if (do_mul) begin
+        case (opcode)
+          4'b0000: begin // mul
+            result = a * b;
+          end
+          4'b0001: begin // mla
+            result = a * b + c;
+          end
+        endcase
+      end
+      else begin
+        case (opcode)
+          4'b1101: begin // mov
+            result = a;
+          end
+          4'b1111: begin // mvn
+            result = !a;
+          end
+          4'b0100: begin // add
+            result = a + b;
+          end
+          4'b0101: begin // adc
+            result = a + b + cpsr[29];
+          end
+          4'b0010: begin // sub
+            result = a - b;
+          end
+          4'b0110: begin // sbc
+            result = a - b - cpsr[29];
+          end
+          4'b0011: begin // rsb
+            result = a - b;
+          end
+          4'b0111: begin // rsc
+            result = a - b - cpsr[29];
+          end
+          4'b1010: begin // cmp
+            r[0] = a + ~b + 1;
+            r[1] = $signed(a) + $signed(~b) + 1;
+            result[31] = r[0][31];
+            result[30] = !r[0];
+            result[29] = r[0][30:0] != r[0];
+            result[28] = $signed(r[0][30:0]) != r[1];
+            result[27:0] = cpsr[27:0];
+          end
+          4'b1011: begin // cmn
+            r[0] = a + b + 1;
+            r[1] = $signed(a) + $signed(b) + 1;
+            result[31] = r[0][31];
+            result[30] = !r[0];
+            result[29] = r[0][30:0] != r[0];
+            result[28] = $signed(r[0][30:0]) != r[1];
+            result[27:0] = cpsr[27:0];
+          end
+          4'b1000: begin // tst
+            r[0] = a & b;
+            result[31] = r[0][31];
+            result[30] = !r[0];
+            result[29:0] = cpsr[29:0];
+          end
+          4'b1001: begin // teq
+            r[0] = a ^ b;
+            result[31] = r[0][31];
+            result[30] = !r[0];
+            result[29:0] = cpsr[29:0];
+          end
+          4'b0000: begin // and
+            result = a & b;
+          end
+          4'b0001: begin // eor
+            result = a ^ b;
+          end
+          4'b1100: begin // orr
+            result = a | b;
+          end
+          4'b1110: begin // bic
+            result = a & ~b;
+          end
+        endcase
+      end
     end
   end
 endmodule
