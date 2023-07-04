@@ -46,7 +46,7 @@ module control_unit(
   wire [3:0] rs = instruction[11:8];
   wire [3:0] rm = instruction[3:0];
   wire [11:0] oprnd2 = instruction[11:0];
-  wire [3:0] opcode = instruction[25:21];
+  wire [3:0] opcode = instruction[24:21];
   reg [3:0] alu_opcode;
   reg [3:0]  alu_destinations [1:0];
   reg [31:0] alu_a;
