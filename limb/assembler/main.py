@@ -30,7 +30,10 @@ enc_opcode = {
   "and": "0000",
   "eor": "0001",
   "orr": "1100",
-  "bic": "1110"
+  "bic": "1110",
+  "b": "1010",
+  "bl": "1011",
+  "bx": "1001"
 }
 
 enc_condition = {
@@ -110,6 +113,10 @@ def enc_mul_long(groups):
   enc_regs(regs, groups.data)
   return groups.opcode["cond"] + "000" + groups.opcode["opcode"] + groups.opcode["s"] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
 
+enc_bx = lambda groups:  groups.opcode["cond"] + "000" + groups.opcode["opcode"] + "01111111111110001" + enc_reg[groups.data["rn_reg"]]
+
+enc_b = lambda groups: groups.opcode["cond"] + groups.opcode["opcode"] + f"{int(groups.data['label_imm']):0>24b}"
+
 suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
@@ -155,6 +162,9 @@ enc_instruction = {
   instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("b", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
+  instruction(re.compile(opcode_re("bl", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
+  instruction(re.compile(opcode_re("bx", ("cond"))), re.compile(data_re((reg_re("rn"),)))): enc_bx
 }
 
 def preprocess(messages, filenames):
