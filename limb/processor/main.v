@@ -68,9 +68,11 @@ module control_unit(
   reg [31:0] cpsr;
   reg do_execute;
   reg do_mul;
-  reg [2:0] do_writeback;
+  reg do_branch;
+  reg [1:0] do_writeback;
   reg [63:0] source;
   reg [3:0] destinations [1:0];
+  reg [23:0] offset;
 
   initial begin
     r[15] = 0;
@@ -206,7 +208,14 @@ module control_unit(
         end
       endcase
     end
+    else if (instruction[27:24] == 4'b1010) begin // b
+      do_writeback <= 0;
+      do_execute <= 0;
+      do_branch <= 1;
+      offset <= instruction[23:0];
+    end
     else begin
+      do_branch <= 0;
       case (opcode)
         4'b1101: begin // mov
           alu_destinations[0] <= rd;
@@ -317,7 +326,12 @@ module control_unit(
         end
       endcase
     end
-    r[15] <= r[15] + 1;
+    if (do_branch) begin
+      r[15] <= offset;
+    end
+    else begin
+      r[15] <= r[15] + 1;
+    end
   end
 endmodule
 
