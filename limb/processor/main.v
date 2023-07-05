@@ -160,13 +160,13 @@ module control_unit(
       do_mul <= 1;
       case (opcode)
         4'b0000: begin // mul
-           alu_destinations[0] <= rn;
+          alu_destinations[0] <= rn;
           alu_a <= r[rd];
           alu_b <= r[rs];
           do_writeback <= 1;
         end
         4'b0001: begin // mla
-           alu_destinations[0] <= rn;
+          alu_destinations[0] <= rn;
           alu_a <= r[rd];
           alu_b <= r[rs];
           alu_c <= r[rm];
@@ -209,47 +209,47 @@ module control_unit(
     else begin
       case (opcode)
         4'b1101: begin // mov
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1101: begin // mvn
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0100: begin // add
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0101: begin // adc
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0010: begin // sub
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0110: begin // sbc
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0011: begin // rsb
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0111: begin // rsc
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
@@ -275,25 +275,25 @@ module control_unit(
           do_writeback <= 2;
         end
         4'b0000: begin // and
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b0001: begin // eor
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1100: begin // orr
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
         end
         4'b1110: begin // bic
-           alu_destinations[0] <= rd;
+          alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
