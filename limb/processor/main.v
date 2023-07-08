@@ -453,3 +453,10 @@ module arithmetic_logic_unit(
     end
   end
 endmodule
+
+module central_processing_unit(
+  clk);
+  input clk;
+  control_unit cu (
+    .clk(clk));
+endmodule
