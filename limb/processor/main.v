@@ -58,7 +58,6 @@ module control_unit(
     .do_execute(do_execute),
     .do_mul(do_mul),
     .opcode(alu_opcode),
-    .cpsr(cpsr),
     .a(alu_a),
     .b(alu_b),
     .c(alu_c),
@@ -237,6 +236,7 @@ module control_unit(
           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 1;
         end
         4'b0010: begin // sub
@@ -249,6 +249,7 @@ module control_unit(
           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 1;
         end
         4'b0011: begin // rsb
@@ -261,26 +262,31 @@ module control_unit(
           alu_destinations[0] <= rd;
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 1;
         end
         4'b1010: begin // cmp
           alu_a <= r[rd];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 2;
         end
         4'b1011: begin // cmn
           alu_a <= r[rd];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 2;
         end
         4'b1000: begin // tst
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 2;
         end
         4'b1001: begin // teq
           alu_a <= r[rn];
           alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          alu_c <= cpsr[31:0];
           do_writeback <= 2;
         end
         4'b0000: begin // and
@@ -339,7 +345,6 @@ module arithmetic_logic_unit(
   do_execute,
   do_mul,
   opcode,
-  cpsr,
   a,
   b,
   c,
@@ -348,7 +353,6 @@ module arithmetic_logic_unit(
   input do_execute;
   input do_mul;
   input [3:0] opcode;
-  input [31:0] cpsr;
   input [31:0] a;
   input [31:0] b;
   input [31:0] c;
@@ -392,19 +396,19 @@ module arithmetic_logic_unit(
             result = a + b;
           end
           4'b0101: begin // adc
-            result = a + b + cpsr[29];
+            result = a + b + c[29];
           end
           4'b0010: begin // sub
             result = a - b;
           end
           4'b0110: begin // sbc
-            result = a - b - cpsr[29];
+            result = a - b - c[29];
           end
           4'b0011: begin // rsb
             result = a - b;
           end
           4'b0111: begin // rsc
-            result = a - b - cpsr[29];
+            result = a - b - c[29];
           end
           4'b1010: begin // cmp
             r[0] = a + ~b + 1;
@@ -413,7 +417,7 @@ module arithmetic_logic_unit(
             result[30] = !r[0];
             result[29] = r[0][30:0] != r[0];
             result[28] = $signed(r[0][30:0]) != r[1];
-            result[27:0] = cpsr[27:0];
+            result[27:0] = c[27:0];
           end
           4'b1011: begin // cmn
             r[0] = a + b + 1;
@@ -422,19 +426,19 @@ module arithmetic_logic_unit(
             result[30] = !r[0];
             result[29] = r[0][30:0] != r[0];
             result[28] = $signed(r[0][30:0]) != r[1];
-            result[27:0] = cpsr[27:0];
+            result[27:0] = c[27:0];
           end
           4'b1000: begin // tst
             r[0] = a & b;
             result[31] = r[0][31];
             result[30] = !r[0];
-            result[29:0] = cpsr[29:0];
+            result[29:0] = c[29:0];
           end
           4'b1001: begin // teq
             r[0] = a ^ b;
             result[31] = r[0][31];
             result[30] = !r[0];
-            result[29:0] = cpsr[29:0];
+            result[29:0] = c[29:0];
           end
           4'b0000: begin // and
             result = a & b;
@@ -457,6 +461,6 @@ endmodule
 module central_processing_unit(
   clk);
   input clk;
-  control_unit cu (
+  control_unit cu(
     .clk(clk));
 endmodule
