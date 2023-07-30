@@ -1,5 +1,5 @@
 # Limb 
-A 32-bit ARM assembler and processor.
+A 32-bit ARM assembler and scalar processor.
 
 ## License
 [MIT](LICENSE)
