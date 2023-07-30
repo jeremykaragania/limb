@@ -33,7 +33,8 @@ enc_opcode = {
   "bic": "1110",
   "b": "1010",
   "bl": "1011",
-  "bx": "1001"
+  "bx": "1001",
+  "nop": "1001"
 }
 
 enc_condition = {
@@ -117,6 +118,8 @@ enc_bx = lambda groups:  groups.opcode["cond"] + "000" + groups.opcode["opcode"]
 
 enc_b = lambda groups: groups.opcode["cond"] + groups.opcode["opcode"] + f"{int(groups.data['label_imm']):0>24b}"
 
+enc_nop = lambda groups: groups.opcode["cond"] + "001" + groups.opcode["opcode"] + "000001111000000000000"
+
 suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
@@ -164,7 +167,8 @@ enc_instruction = {
   instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
   instruction(re.compile(opcode_re("b", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
   instruction(re.compile(opcode_re("bl", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
-  instruction(re.compile(opcode_re("bx", ("cond"))), re.compile(data_re((reg_re("rn"),)))): enc_bx
+  instruction(re.compile(opcode_re("bx", ("cond"))), re.compile(data_re((reg_re("rn"),)))): enc_bx,
+  instruction(re.compile(opcode_re("nop", ("cond"))), None): enc_nop
 }
 
 def preprocess(messages, filenames):
@@ -199,11 +203,14 @@ def assemble(messages, files):
       for i_re in enc_instruction:
         opcode_match = i_re.opcode.match(i.opcode)
         if opcode_match:
-          data_match = i_re.data.match(i.data)
+          data_match = 1
+          data_groups = None
+          if i.data:
+            data_match = i_re.data.match(i.data)
+            data_groups = {j:k for j, k in data_match.groupdict().items() if k}
           if data_match:
             if not messages:
               opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
-              data_groups = {j:k for j, k in data_match.groupdict().items() if k}
               opcode_groups["cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
               opcode_groups["opcode"] = enc_opcode[opcode_groups["opcode"]]
               opcode_groups["s"] = '1' if 's' in opcode_groups else '0'
