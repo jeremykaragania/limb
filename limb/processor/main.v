@@ -214,6 +214,8 @@ module control_unit(
       do_branch <= 1;
       offset <= instruction[23:0];
     end
+    else if (instruction[27:24] == 4'b0011 && instruction[15:12] == 4'b1111) begin // nop
+    end
     else begin
       do_branch <= 0;
       case (opcode)
