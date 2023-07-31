@@ -4,7 +4,7 @@ module random_access_memory(
   din,
   dout,
   rw);
-  parameter filename = "boot";
+  parameter filename = "boot_rom";
   input clk;
   input [31:0] a;
   input [31:0] din;
