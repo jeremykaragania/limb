@@ -229,9 +229,13 @@ def main():
   messages = []
   objfile = "a.out"
   for i, j in enumerate(args):
-    if j == "-o":
-      objfile = args[i+1]
-      del args[i+1]
+    if j[0] == '-':
+      if j[1] == 'o':
+        if j[2:]:
+          objfile = j[2:]
+        else:
+          objfile = args[i+1]
+          del args[i+1]
     else:
       filenames.append(j)
   obj = assemble(messages, preprocess(messages, set(filenames)))
