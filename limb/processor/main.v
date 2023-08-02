@@ -215,6 +215,7 @@ module control_unit(
       offset <= instruction[23:0];
     end
     else if (instruction[27:24] == 4'b0011 && instruction[15:12] == 4'b1111) begin // nop
+      do_execute <= 0;
     end
     else begin
       do_branch <= 0;
@@ -231,9 +232,19 @@ module control_unit(
         end
         4'b0100: begin // add
           alu_destinations[0] <= rd;
-          alu_a <= r[rn];
-          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
+          if (rn == alu_destinations[0]) begin
+            alu_a <= source[31:0];
+          end
+          else begin
+            alu_a <= r[rn];
+          end
+          if (!oprnd2_type && oprnd2 == alu_destinations[0]) begin
+            alu_b <= source[31:0];
+          end
+          else begin
+            alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+          end
         end
         4'b0101: begin // adc
           alu_destinations[0] <= rd;
