@@ -130,41 +130,41 @@ reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(14)])
 
 shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b5')})"
 
-oprnd2_re = '|'.join((
+oprnd2_re = "(?:" + '|'.join((
   f"(?P<lsl>{shift_re('lsl')})",
   f"(?P<lsr>{shift_re('lsr')})",
   f"(?P<asr>{shift_re('asr')})",
   f"(?P<ror>{shift_re('ror')})",
   f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
   f"(?P<reg>{reg_re('rm')})",
-  f"(?P<imm>{imm_re('b32')})"))
+  f"(?P<imm>{imm_re('b32')})")) + ")"
 
 opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in optional else ''}{condition_re if 'cond' in optional else ''}$"
 
 data_re = lambda res: "^" + '\s*,\s*'.join(res) + "$"
 
 enc_instruction = {
-  instruction(re.compile(opcode_re("mov", ("s", "cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("mvn", ("s", "cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("add", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("adc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("sub", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("rsb", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("rsc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("mov", ("s", "cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("mvn", ("s", "cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("add", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("adc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("sub", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("rsb", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("rsc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
   instruction(re.compile(opcode_re("mul", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"))))): enc_mul,
   instruction(re.compile(opcode_re("mla", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn"))))): enc_mul,
   instruction(re.compile(opcode_re("umull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
   instruction(re.compile(opcode_re("umlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
   instruction(re.compile(opcode_re("smull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
   instruction(re.compile(opcode_re("smlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("cmp", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("cmn", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("tst", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("teq", ("cond"))), re.compile(data_re((reg_re("rd"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("and", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
-  instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), f"(?:{oprnd2_re})")))): enc_proc,
+  instruction(re.compile(opcode_re("cmp", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("cmn", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("tst", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("teq", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("and", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
+  instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
   instruction(re.compile(opcode_re("b", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
   instruction(re.compile(opcode_re("bl", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
   instruction(re.compile(opcode_re("bx", ("cond"))), re.compile(data_re((reg_re("rn"),)))): enc_bx,
