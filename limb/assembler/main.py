@@ -143,33 +143,35 @@ opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in
 
 data_re = lambda res: "^" + '\s*,\s*'.join(res) + "$"
 
-enc_instruction = {
-  instruction(re.compile(opcode_re("mov", ("s", "cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("mvn", ("s", "cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("add", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("adc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("sub", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("rsb", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("rsc", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("mul", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"))))): enc_mul,
-  instruction(re.compile(opcode_re("mla", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn"))))): enc_mul,
-  instruction(re.compile(opcode_re("umull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("umlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("smull", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("smlal", ("s", "cond"))), re.compile(data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn"))))): enc_mul_long,
-  instruction(re.compile(opcode_re("cmp", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("cmn", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("tst", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("teq", ("cond"))), re.compile(data_re((reg_re("rd"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("and", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("eor", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("orr", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("bic", ("s", "cond"))), re.compile(data_re((reg_re("rd"), reg_re("rn"), oprnd2_re)))): enc_proc,
-  instruction(re.compile(opcode_re("b", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
-  instruction(re.compile(opcode_re("bl", ("cond"))), re.compile(data_re((imm_re("label"),)))): enc_b,
-  instruction(re.compile(opcode_re("bx", ("cond"))), re.compile(data_re((reg_re("rn"),)))): enc_bx,
-  instruction(re.compile(opcode_re("nop", ("cond"))), None): enc_nop
+enc_instruction_re = {
+  instruction(opcode_re("mov", ("s", "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("mvn", ("s", "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("add", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("adc", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("sub", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("rsb", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("rsc", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("mul", ("s", "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs")))): enc_mul,
+  instruction(opcode_re("mla", ("s", "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn")))): enc_mul,
+  instruction(opcode_re("umull", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("umlal", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("smull", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("smlal", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("cmp", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("cmn", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("tst", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("teq", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("and", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("eor", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("orr", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("bic", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("b", ("cond")), data_re((imm_re("label"),))): enc_b,
+  instruction(opcode_re("bl", ("cond")), data_re((imm_re("label"),))): enc_b,
+  instruction(opcode_re("bx", ("cond")), data_re((reg_re("rn"),))): enc_bx,
+  instruction(opcode_re("nop", ("cond")), None): enc_nop
 }
+
+enc_instruction = {instruction(re.compile(i.opcode), re.compile(i.data) if i.data else None): j for i, j in enc_instruction_re.items()}
 
 def preprocess(messages, filenames):
   files = {}
