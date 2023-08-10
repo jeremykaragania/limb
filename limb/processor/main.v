@@ -74,6 +74,23 @@ module control_unit(
   reg [3:0] destinations [1:0];
   reg [23:0] offset;
 
+  task forward_operands;
+    begin
+      if (rn == alu_destinations[0]) begin
+        alu_a <= source[31:0];
+      end
+      else begin
+        alu_a <= r[rn];
+      end
+      if (!oprnd2_type && oprnd2 == alu_destinations[0]) begin
+        alu_b <= source[31:0];
+      end
+      else begin
+        alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
+      end
+    end
+  endtask
+
   initial begin
     r[15] = 0;
     cpsr = 0;
@@ -233,18 +250,7 @@ module control_unit(
         4'b0100: begin // add
           alu_destinations[0] <= rd;
           do_writeback <= 1;
-          if (rn == alu_destinations[0]) begin
-            alu_a <= source[31:0];
-          end
-          else begin
-            alu_a <= r[rn];
-          end
-          if (!oprnd2_type && oprnd2 == alu_destinations[0]) begin
-            alu_b <= source[31:0];
-          end
-          else begin
-            alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
-          end
+          forward_operands();
         end
         4'b0101: begin // adc
           alu_destinations[0] <= rd;
