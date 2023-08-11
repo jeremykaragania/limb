@@ -261,9 +261,8 @@ module control_unit(
         end
         4'b0010: begin // sub
           alu_destinations[0] <= rd;
-          alu_a <= r[rn];
-          alu_b <= !oprnd2_type ? r[oprnd2] : oprnd2;
           do_writeback <= 1;
+          forward_operands();
         end
         4'b0110: begin // sbc
           alu_destinations[0] <= rd;
