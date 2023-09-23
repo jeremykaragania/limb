@@ -33,12 +33,6 @@ module control_unit(
   reg [31:0] if_ram_din;
   wire [31:0] if_ram_dout;
   reg if_ram_rw;
-  random_access_memory ram(
-    .clk(clk),
-    .a(if_ram_a),
-    .din(if_ram_din),
-    .dout(if_ram_dout),
-    .rw(if_ram_rw));
   wire [31:0] if_instruction = if_ram_dout;
   wire [3:0] if_cond = if_instruction[31:28];
   wire if_oprnd2_type = if_instruction[25];
@@ -48,33 +42,48 @@ module control_unit(
   wire [3:0] if_rm = if_instruction[3:0];
   wire [11:0] if_oprnd2 = if_instruction[11:0];
   wire [3:0] if_opcode = if_instruction[24:21];
-  reg [3:0] id_alu_opcode;
-  reg [3:0]  id_alu_destinations [1:0];
+  reg [3:0] id_cond;
+  reg id_oprnd2_type;
+  reg [3:0] id_rn;
+  reg [3:0] id_rd;
+  reg [3:0] id_rs;
+  reg [3:0] id_rm;
+  reg [11:0] id_oprnd2;
+  reg [3:0] id_opcode;
+  reg id_do_execute;
+  reg id_do_mul;
+  reg id_do_branch;
+  reg [1:0] id_do_writeback;
+  reg [23:0] id_offset;
   reg [31:0] id_alu_a;
   reg [31:0] id_alu_b;
   reg [31:0] id_alu_c;
   reg [31:0] id_alu_d;
+  reg [3:0]  id_alu_destinations [1:0];
+  reg [1:0] ie_do_writeback;
   reg [3:0]  ie_alu_destinations [1:0];
   wire [63:0] ie_alu_result;
+  reg [1:0] wb_do_writeback;
+  reg [63:0] wb_source;
+  reg [3:0] wb_destinations [1:0];
+  reg [31:0] r [0:30];
+  reg [31:0] cpsr;
+  random_access_memory ram(
+    .clk(clk),
+    .a(if_ram_a),
+    .din(if_ram_din),
+    .dout(if_ram_dout),
+    .rw(if_ram_rw));
   arithmetic_logic_unit alu(
     .clk(clk),
     .do_execute(id_do_execute),
     .do_mul(id_do_mul),
-    .opcode(id_alu_opcode),
+    .opcode(id_opcode),
     .a(id_alu_a),
     .b(id_alu_b),
     .c(id_alu_c),
     .d(id_alu_d),
     .result(ie_alu_result));
-  reg [31:0] r [0:30];
-  reg [31:0] cpsr;
-  reg id_do_execute;
-  reg id_do_mul;
-  reg id_do_branch;
-  reg [1:0] id_do_writeback;
-  reg [63:0] wb_source;
-  reg [3:0] wb_destinations [1:0];
-  reg [23:0] id_offset;
 
   task forward_operands;
     begin
@@ -101,6 +110,22 @@ module control_unit(
   always @ (posedge clk) begin
     if_ram_a <= r[15];
     if_ram_rw <= 0;
+    id_cond <= if_instruction[31:28];
+    id_oprnd2_type <= if_instruction[25];
+    id_rn <= if_instruction[19:16];
+    id_rd <= if_instruction[15:12];
+    id_rs <= if_instruction[11:8];
+    id_rm <= if_instruction[3:0];
+    id_oprnd2 <= if_instruction[11:0];
+    id_opcode <= if_instruction[24:21];
+    ie_do_writeback <= id_do_writeback;
+    ie_alu_destinations[0] <= id_alu_destinations[0];
+    ie_alu_destinations[1] <= id_alu_destinations[1];
+    wb_do_writeback <= ie_do_writeback;
+    wb_source <= ie_alu_result;
+    wb_destinations[0] <=  ie_alu_destinations[0];
+    wb_destinations[1] <=  ie_alu_destinations[1];
+
     case (if_cond)
       4'b0000: begin // eq
         if (cpsr[30]) begin
@@ -176,7 +201,6 @@ module control_unit(
         id_do_execute <= 1;
       end
     endcase
-    id_alu_opcode <= if_opcode;
     if (!if_instruction[25] && if_instruction[4]) begin
       id_do_mul <= 1;
       case (if_opcode)
@@ -234,14 +258,31 @@ module control_unit(
       id_offset <= if_instruction[23:0];
     end
     else if (if_instruction[27:24] == 4'b0011 && if_instruction[15:12] == 4'b1111) begin // nop
+      id_do_writeback <= 0;
       id_do_execute <= 0;
     end
     else begin
       case (if_opcode)
         4'b1101: begin // mov
           id_alu_destinations[0] <= if_rd;
-          id_alu_a <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
           id_do_writeback <= 1;
+          if (!if_oprnd2_type) begin
+            if ((id_do_writeback) && ((if_oprnd2 == id_alu_destinations[0]))) begin
+              id_alu_a <= id_alu_a;
+            end
+            else if ((ie_do_writeback) && ((if_oprnd2 == ie_alu_destinations[0]))) begin
+              id_alu_a <= ie_alu_result;
+            end
+            else if ((wb_do_writeback) && ((if_oprnd2 == wb_destinations[0]))) begin
+              id_alu_a <= wb_source;
+            end
+            else begin
+              id_alu_a <= r[if_oprnd2];
+            end
+          end
+          else begin
+            id_alu_a <= if_oprnd2;
+          end
         end
         4'b1101: begin // mvn
           id_alu_destinations[0] <= if_rd;
@@ -335,25 +376,18 @@ module control_unit(
         end
       endcase
     end
-    ie_alu_destinations[0] <= id_alu_destinations[0];
-    ie_alu_destinations[1] <= id_alu_destinations[1];
-    if (id_do_writeback) begin
-      wb_source <= ie_alu_result;
-      wb_destinations[0] <=  ie_alu_destinations[0];
-      wb_destinations[1] <=  ie_alu_destinations[1];
-      case (id_do_writeback)
-        1: begin
-          r[wb_destinations[0]] <= wb_source[31:0];
-        end
-        2: begin
-          cpsr <= wb_source[31:0];
-        end
-        3: begin
-          r[wb_destinations[0]] <= wb_source[63:32];
-          r[wb_destinations[1]] <= wb_source[31:0];
-        end
-      endcase
-    end
+    case (wb_do_writeback)
+      1: begin
+        r[wb_destinations[0]] <= wb_source[31:0];
+      end
+      2: begin
+        cpsr <= wb_source[31:0];
+      end
+      3: begin
+        r[wb_destinations[0]] <= wb_source[63:32];
+        r[wb_destinations[1]] <= wb_source[31:0];
+      end
+    endcase
     if (id_do_branch) begin
       r[15] <= id_offset;
     end
