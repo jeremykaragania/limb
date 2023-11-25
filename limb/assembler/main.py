@@ -124,7 +124,7 @@ suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
 
-imm_re = lambda group: f"(?P<{group}_imm>[^\s]*)"
+imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(14)])})"
 
@@ -138,6 +138,14 @@ oprnd2_re = "(?:" + '|'.join((
   f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
   f"(?P<reg>{reg_re('rm')})",
   f"(?P<imm>{imm_re('b32')})")) + ")"
+
+sign_re = f"(?P<sign>[+|-]\s*)"
+
+a_mode2_reg_re = f"\[{reg_re('rn')}"
+
+a_mode2_re = (
+  f"{a_mode2_reg_re}\s*,\s*{sign_re}{imm_re('b12')}\]",
+  f"{a_mode2_reg_re}\s*,\s*{sign_re}{reg_re('rm')}\]")
 
 opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in optional else ''}{condition_re if 'cond' in optional else ''}$"
 
