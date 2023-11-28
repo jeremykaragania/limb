@@ -92,7 +92,7 @@ def enc_proc(groups):
   oprnd2_type = list(groups.data)[0]
   oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
   oprnd2_type = "0" if oprnd2_type == "reg" else "1"
-  return groups.opcode["cond"] + "00" + oprnd2_type + groups.opcode["opcode"] + groups.opcode["s"] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+  return groups.opcode["enc_cond"] + "00" + oprnd2_type + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
 def enc_mul(groups):
   regs = {
@@ -102,7 +102,7 @@ def enc_mul(groups):
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
-  return groups.opcode["cond"] + "000" + groups.opcode["opcode"] + groups.opcode["s"] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
 
 def enc_mul_long(groups):
   regs = {
@@ -112,13 +112,13 @@ def enc_mul_long(groups):
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
-  return groups.opcode["cond"] + "000" + groups.opcode["opcode"] + groups.opcode["s"] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
+  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
 
-enc_bx = lambda groups:  groups.opcode["cond"] + "000" + groups.opcode["opcode"] + "01111111111110001" + enc_reg[groups.data["rn_reg"]]
+enc_bx = lambda groups:  groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + "01111111111110001" + enc_reg[groups.data["rn_reg"]]
 
-enc_b = lambda groups: groups.opcode["cond"] + groups.opcode["opcode"] + f"{int(groups.data['label_imm']):0>24b}"
+enc_b = lambda groups: groups.opcode["enc_cond"] + groups.opcode["enc_opcode"] + f"{int(groups.data['label_imm']):0>24b}"
 
-enc_nop = lambda groups: groups.opcode["cond"] + "001" + groups.opcode["opcode"] + "000001111000000000000"
+enc_nop = lambda groups: groups.opcode["enc_cond"] + "001" + groups.opcode["enc_opcode"] + "000001111000000000000"
 
 suffix_re = "(?P<s>s)?"
 
@@ -221,8 +221,8 @@ def assemble(messages, files):
           if data_match:
             if not messages:
               opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
-              opcode_groups["cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
-              opcode_groups["opcode"] = enc_opcode[opcode_groups["opcode"]]
+              opcode_groups["enc_cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
+              opcode_groups["enc_opcode"] = enc_opcode[opcode_groups["opcode"]]
               opcode_groups["s"] = '1' if 's' in opcode_groups else '0'
               i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
               obj.append((f"{int(i_enc, 2):<04x}"))
