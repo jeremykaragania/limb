@@ -88,7 +88,7 @@ def enc_proc(groups):
   oprnd2_type = list(groups.data)[0]
   oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
   oprnd2_type = "0" if oprnd2_type == "reg" else "1"
-  return groups.opcode["enc_cond"] + "00" + oprnd2_type + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+  return groups.opcode["enc_cond"] + "00" + oprnd2_type + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
 
 def enc_mul(groups):
   regs = {
@@ -98,7 +98,7 @@ def enc_mul(groups):
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
-  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
 
 def enc_mul_long(groups):
   regs = {
@@ -108,7 +108,7 @@ def enc_mul_long(groups):
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
-  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode["s"] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
+  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
 
 enc_bx = lambda groups: groups.opcode["enc_cond"] + "000100101111111111110001" + enc_reg[groups.data["rn_reg"]]
 
@@ -122,7 +122,7 @@ condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
 
 imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
 
-reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(14)])})"
+reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
 
 shift_re = lambda group: f"{reg_re(f'{group}_rm')}\s*,\s*{group}\s+(?:{reg_re(f'{group}_rs')}|{imm_re(f'{group}_b5')})"
 
@@ -148,34 +148,34 @@ opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in
 data_re = lambda res: "^" + '\s*,\s*'.join(res) + "$"
 
 enc_instruction_re = {
-  instruction(opcode_re("mov", ("s", "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("mvn", ("s", "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("add", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("adc", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("sub", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("rsb", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("rsc", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("mul", ("s", "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs")))): enc_mul,
-  instruction(opcode_re("mla", ("s", "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn")))): enc_mul,
-  instruction(opcode_re("umull", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
-  instruction(opcode_re("umlal", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
-  instruction(opcode_re("smull", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
-  instruction(opcode_re("smlal", ("s", "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("mov", ('s', "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("mvn", ('s', "cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("add", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("adc", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("sub", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("rsb", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("rsc", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("mul", ('s', "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs")))): enc_mul,
+  instruction(opcode_re("mla", ('s', "cond")), data_re((reg_re("rd"), reg_re("rm"), reg_re("rs"), reg_re("rn")))): enc_mul,
+  instruction(opcode_re("umull", ('s', "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("umlal", ('s', "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("smull", ('s', "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
+  instruction(opcode_re("smlal", ('s', "cond")), data_re((reg_re("rd_lo"), reg_re("rd_hi"), reg_re("rm"), reg_re("rn")))): enc_mul_long,
   instruction(opcode_re("cmp", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
   instruction(opcode_re("cmn", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
   instruction(opcode_re("tst", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
   instruction(opcode_re("teq", ("cond")), data_re((reg_re("rd"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("and", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("eor", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("orr", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
-  instruction(opcode_re("bic", ("s", "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("and", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("eor", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("orr", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
+  instruction(opcode_re("bic", ('s', "cond")), data_re((reg_re("rd"), reg_re("rn"), oprnd2_re))): enc_proc,
   instruction(opcode_re("b", ("cond")), data_re((imm_re("label"),))): enc_b,
   instruction(opcode_re("bl", ("cond")), data_re((imm_re("label"),))): enc_b,
   instruction(opcode_re("bx", ("cond")), data_re((reg_re("rn"),))): enc_bx,
-  instruction(opcode_re("nop", ("cond")), None): enc_nop
+  instruction(opcode_re("nop", ("cond")), "^$"): enc_nop,
 }
 
-enc_instruction = {instruction(re.compile(i.opcode), re.compile(i.data) if i.data else None): j for i, j in enc_instruction_re.items()}
+enc_instruction = {instruction(re.compile(i.opcode), re.compile(i.data)): j for i, j in enc_instruction_re.items()}
 
 def preprocess(messages, filenames):
   files = {}
@@ -205,22 +205,19 @@ def assemble(messages, files):
   obj = []
   for f in files:
     for line, i in enumerate(files[f]):
-      opcode_match = None
+      opcode_match = 0
       for i_re in enc_instruction:
         opcode_match = i_re.opcode.match(i.opcode)
         if opcode_match:
-          data_match = 1
-          data_groups = None
-          if i.data:
-            data_match = i_re.data.match(i.data)
-            data_groups = {j:k for j, k in data_match.groupdict().items() if k}
+          data_match = i_re.data.match(i.data)
           if data_match:
             if not messages:
+              data_groups = {j:k for j, k in data_match.groupdict().items() if k}
               opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
               opcode_groups["enc_cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
               if enc_instruction[i_re] == enc_proc:
                 opcode_groups["enc_opcode"] = enc_opcode[opcode_groups["opcode"]]
-              opcode_groups["s"] = '1' if 's' in opcode_groups else '0'
+              opcode_groups["enc_s"] = '1' if 's' in opcode_groups else '0'
               i_enc = enc_instruction[i_re](instruction(opcode_groups, data_groups))
               obj.append((f"{int(i_enc, 2):<04x}"))
           else:
