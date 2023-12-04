@@ -98,7 +98,7 @@ def enc_mul(groups):
     "rm_reg": "0000"
   }
   enc_regs(regs, groups.data)
-  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+  return groups.opcode["enc_cond"] + "000000" + '0' if groups.opcode["opcode"] == "mul" else '1' + groups.opcode['enc_s'] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
 
 def enc_mul_long(groups):
   regs = {
