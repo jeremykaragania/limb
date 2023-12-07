@@ -136,11 +136,14 @@ oprnd2_re = (
 
 sign_re = f"(?P<sign>[+|-]\s*)"
 
-a_mode2_reg_re = f"\[{reg_re('rn')}"
-
 a_mode2_re = (
-  f"{a_mode2_reg_re}\s*,\s*{sign_re}{imm_re('b12')}\]",
-  f"{a_mode2_reg_re}\s*,\s*{sign_re}{reg_re('rm')}\]")
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*lsl\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*lsr\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*asr\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*ror\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*rrx\]")
 
 def fold(x):
   if len(x) == 1:
