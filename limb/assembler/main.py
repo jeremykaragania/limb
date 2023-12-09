@@ -113,6 +113,8 @@ enc_bx = lambda groups: groups.opcode["enc_cond"] + "000100101111111111110001" +
 
 enc_b = lambda groups: groups.opcode["enc_cond"] + "101" + '0' if groups.opcode["opcode"] == "b" else '1' + f"{int(groups.data['label_imm']):0>24b}"
 
+enc_sdt = lambda groups: groups.opcode["enc_cond"] + "011" + "00000" + enc_reg[groups.data["rn_reg"]] + enc_reg[groups.data["rd_reg"]] + f"{int(groups.data['b12_imm'] if 'b12_imm' in groups.data else '0'):0>12b}"
+
 enc_nop = lambda groups: groups.opcode["enc_cond"] + "0011001" + "000001111000000000000"
 
 suffix_re = "(?P<s>s)?"
