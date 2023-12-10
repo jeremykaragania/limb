@@ -33,7 +33,7 @@ enc_opcode = {
   "bic": "1110",
 }
 
-enc_condition = {
+enc_cond = {
   "eq": "0000",
   "ne": "0001",
   "cs": "0010",
@@ -53,79 +53,111 @@ enc_condition = {
 
 enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 
-def enc_regs(x, y):
-  for i in x:
-    if i in y:
-      x[i] = enc_reg[y[i]]
-      del y[i]
-
-def enc_shift(x, y):
-  ret = ""
-  if f"b5_imm" in x:
-    ret = f"{int(x['b5_imm']):05b}" + y[1:]
+def enc_a_mode(groups):
+  if "b12_imm" in groups.data:
+    offset = f"{int(groups.data['b12_imm']):0>12b}"
+    return offset
+  elif "shift" in groups.data:
+    shift = enc_shift(groups)
+    return shift
   else:
-    ret = enc_reg[x[f"rs_reg"]] + y
-  ret += enc_reg[x[f"rm_reg"]]
+    rm = enc_reg[groups.data["rm_reg"]]
+    return "00000000" + rm
+
+def enc_shift(groups):
+  ret = ""
+  enc_shift_type = {
+    "lsl": "00",
+    "lsr": "01",
+    "asr": "10",
+    "ror": "11"
+  }
+  shift_type = enc_shift_type[groups.data["shift"]]
+  if "b5_imm" in groups.data:
+    ret = f"{int(groups.data['b5_imm']):0>5b}" + shift_type + '0'
+  else:
+    ret = enc_reg[groups.data["rs_reg"]] + '0' + shift_type + '1'
+  ret += enc_reg[groups.data["rm_reg"]]
   return ret
 
 enc_oprnd2 = {
-  "lsl": lambda x: enc_shift(x, "0001"),
-  "lsr": lambda x: enc_shift(x, "0011"),
-  "asr": lambda x: enc_shift(x, "0101"),
-  "ror": lambda x: enc_shift(x, "0111"),
-  "rrx": lambda x: "00000110" + enc_reg[x[f"{list(x)[0]}_reg"]],
-  "reg": lambda x: enc_reg[x["rm_reg"]],
-  "imm": lambda x: f"{int(x['b32_imm']):b}"
+  "lsl": lambda x: enc_shift(x),
+  "lsr": lambda x: enc_shift(x),
+  "asr": lambda x: enc_shift(x),
+  "ror": lambda x: enc_shift(x),
+  "rrx": lambda x: "00000110" + enc_reg[x.data["rm_reg"]],
+  "reg": lambda x: enc_reg[x.data["rm_reg"]],
+  "imm": lambda x: f"{int(x.data['b12_imm']):0>12b}"
 }
 
-def enc_proc(groups):
-  regs = {
-    "rn_reg": "0000",
-    "rd_reg": "0000"
-  }
-  enc_regs(regs, groups.data)
-  oprnd2_type = list(groups.data)[0]
-  oprnd2 = f"{enc_oprnd2[oprnd2_type](groups.data):0>12}"
-  oprnd2_type = "0" if oprnd2_type == "reg" else "1"
-  return groups.opcode["enc_cond"] + "00" + oprnd2_type + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rn_reg"] + regs["rd_reg"] + oprnd2
+def enc_dpi(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  oprnd2_type = list(groups.data)[1]
+  i = '0' if oprnd2_type == "reg" else '1'
+  opcode = enc_opcode[groups.opcode["opcode"]]
+  s = '0' if 's' not in groups.opcode else '1'
+  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
+  rd = enc_reg[groups.data["rd_reg"]]
+  oprnd2 = enc_oprnd2[oprnd2_type](groups)
+  return cond + "00" + i + opcode + s + rn + rd + oprnd2
 
-def enc_mul(groups):
-  regs = {
-    "rd_reg": "0000",
-    "rn_reg": "0000",
-    "rs_reg": "0000",
-    "rm_reg": "0000"
-  }
-  enc_regs(regs, groups.data)
-  return groups.opcode["enc_cond"] + "000000" + '0' if groups.opcode["opcode"] == "mul" else '1' + groups.opcode['enc_s'] + regs["rd_reg"] + regs["rn_reg"] + regs["rs_reg"] + "1001" + regs["rm_reg"]
+def enc_mi(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  a = '0' if groups.opcode["opcode"][2] == "u" else '1'
+  s = '0' if 's' not in groups.opcode else '1'
+  rd = enc_reg[groups.data["rd_reg"]]
+  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
+  rs = enc_reg[groups.data["rs_reg"]]
+  rm = enc_reg[groups.data["rm_reg"]]
+  return cond + "000000" + a + s + rd + rn + rs + "1001" + rm
 
-def enc_mul_long(groups):
-  regs = {
-    "rd_hi_reg": "0000",
-    "rd_lo_reg": "0000",
-    "rn_reg": "0000",
-    "rm_reg": "0000"
-  }
-  enc_regs(regs, groups.data)
-  return groups.opcode["enc_cond"] + "000" + groups.opcode["enc_opcode"] + groups.opcode['enc_s'] + regs["rd_hi_reg"] + regs["rd_lo_reg"] + regs["rn_reg"] + "1001" + regs["rm_reg"]
+def enc_mli(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  u = '0' if 's' == groups.opcode["opcode"][0] else '1'
+  a = '0' if groups.opcode["opcode"][2] == 'u' else '1'
+  s = '0' if 's' not in groups.opcode else '1'
+  rd_hi = enc_reg[groups.data["rd_hi_reg"]]
+  rd_lo = enc_reg[groups.data["rd_lo_reg"]]
+  rn = enc_reg[groups.data["rn_reg"]]
+  rm = enc_reg[groups.data["rm_reg"]]
+  return cond + "00001" + u + a + s + rd_hi + rd_lo + rn + "1001" + rm
 
-enc_bx = lambda groups: groups.opcode["enc_cond"] + "000100101111111111110001" + enc_reg[groups.data["rn_reg"]]
+def enc_bei(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  rn = enc_reg[groups.data["rn_reg"]]
+  return cond + "000100101111111111110001" + rn
 
-enc_b = lambda groups: groups.opcode["enc_cond"] + "101" + '0' if groups.opcode["opcode"] == "b" else '1' + f"{int(groups.data['label_imm']):0>24b}"
+def enc_bi(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  l = '0' if groups.opcode["opcode"] == "b" else '1'
+  offset = f"{int(groups.data['label_imm']):0>24b}"
+  return cond + "101" + l + offset
 
-enc_sdt = lambda groups: groups.opcode["enc_cond"] + "011" + "00000" + enc_reg[groups.data["rn_reg"]] + enc_reg[groups.data["rd_reg"]] + f"{int(groups.data['b12_imm'] if 'b12_imm' in groups.data else '0'):0>12b}"
+def enc_sdt(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  p = '0'
+  u = '0' if groups.data["sign"] == '-' else '1'
+  b = '0'
+  w = '0'
+  l = '0'
+  rn = enc_reg[groups.data["rn_reg"]]
+  rd = enc_reg[groups.data["rd_reg"]]
+  a_mode = enc_a_mode(groups)
+  return cond + "011" + p + u + b + w + l + rn + rd + a_mode
 
-enc_nop = lambda groups: groups.opcode["enc_cond"] + "0011001" + "000001111000000000000"
+def enc_nop(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  return cond + "0011001000001111000000000000"
 
 suffix_re = "(?P<s>s)?"
 
-condition_re = f"(?P<cond>{'|'.join(enc_condition)})?"
+condition_re = f"(?P<cond>{'|'.join(enc_cond)})?"
 
 imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
 
-shift_re = lambda group: f"{reg_re('rm')}\s*{group}\s+(?:{reg_re(f'rs')}|{imm_re(f'b5')})"
+shift_re = lambda group: f"{reg_re('rm')}\s*(?P<shift>{group})\s+(?:{reg_re(f'rs')}|{imm_re(f'b5')})"
 
 oprnd2_re = (
   f"(?P<lsl>{shift_re('lsl')})",
@@ -134,18 +166,18 @@ oprnd2_re = (
   f"(?P<ror>{shift_re('ror')})",
   f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
   f"(?P<reg>{reg_re('rm')})",
-  f"(?P<imm>{imm_re('b32')})")
+  f"(?P<imm>{imm_re('b12')})")
 
 sign_re = f"(?P<sign>[+|-]\s*)"
 
 a_mode2_re = (
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\]",
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*lsl\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*lsr\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*asr\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*ror\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*rrx\]")
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')}\]",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\]")
 
 def fold(x):
   if len(x) == 1:
@@ -176,30 +208,30 @@ opcode_re = lambda opcode, optional: f"^(?P<opcode>{opcode}){suffix_re if 's' in
 data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else ['^' + "\s*,\s*".join(unfold(i)) + '$' for i in fold(res)]
 
 enc_instruction_re = (
-  (instruction(opcode_re("mov", ('s', "cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("mvn", ('s', "cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("add", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("adc", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("sub", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("rsb", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("rsc", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("mul", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")]])), enc_mul),
-  (instruction(opcode_re("mla", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")], [reg_re("rn")]])), enc_mul),
-  (instruction(opcode_re("umull", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mul_long),
-  (instruction(opcode_re("umlal", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mul_long),
-  (instruction(opcode_re("smull", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mul_long),
-  (instruction(opcode_re("smlal", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mul_long),
-  (instruction(opcode_re("cmp", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("cmn", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("tst", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("teq", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("and", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("eor", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("orr", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("bic", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_proc),
-  (instruction(opcode_re("b", ("cond")), data_re([[imm_re("label")]])), enc_b),
-  (instruction(opcode_re("bl", ("cond")), data_re([[imm_re("label")]])), enc_b),
-  (instruction(opcode_re("bx", ("cond")), data_re([[reg_re("rn")]])), enc_bx),
+  (instruction(opcode_re("mov", ('s', "cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("mvn", ('s', "cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("add", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("adc", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("sub", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("rsb", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("rsc", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("mul", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")]])), enc_mi),
+  (instruction(opcode_re("mla", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")], [reg_re("rn")]])), enc_mi),
+  (instruction(opcode_re("umull", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
+  (instruction(opcode_re("umlal", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
+  (instruction(opcode_re("smull", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
+  (instruction(opcode_re("smlal", ('s', "cond")), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
+  (instruction(opcode_re("cmp", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("cmn", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("tst", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("teq", ("cond")), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("and", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("eor", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("orr", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("bic", ('s', "cond")), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re("b", ("cond")), data_re([[imm_re("label")]])), enc_bi),
+  (instruction(opcode_re("bl", ("cond")), data_re([[imm_re("label")]])), enc_bi),
+  (instruction(opcode_re("bx", ("cond")), data_re([[reg_re("rn")]])), enc_bei),
   (instruction(opcode_re("nop", ("cond")), ["^$"]), enc_nop),
 )
 
@@ -244,10 +276,6 @@ def assemble(messages, files):
               if not messages:
                 data_groups = {j:k for j, k in data_match.groupdict().items() if k}
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
-                opcode_groups["enc_cond"] = enc_condition[opcode_groups["cond"]] if "cond" in opcode_groups else enc_condition["al"]
-                if fn == enc_proc:
-                  opcode_groups["enc_opcode"] = enc_opcode[opcode_groups["opcode"]]
-                opcode_groups["enc_s"] = '1' if 's' in opcode_groups else '0'
                 i_enc = fn(instruction(opcode_groups, data_groups))
                 obj.append((f"{int(i_enc, 2):<04x}"))
                 break
