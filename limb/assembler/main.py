@@ -135,10 +135,10 @@ def enc_bi(groups):
 
 def enc_sdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
-  p = '0'
+  p = '0' if 'post' in groups.data else '1'
   u = '0' if groups.data["sign"] == '-' else '1'
   b = '0'
-  w = '0'
+  w = '0' if p == '0' or 'pre' not in groups.data else '1'
   l = '0'
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
@@ -171,13 +171,20 @@ oprnd2_re = (
 sign_re = f"(?P<sign>[+|-]\s*)"
 
 a_mode2_re = (
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')}\]",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\]")
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\](?P<pre>!?)",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b12')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx))")
 
 def fold(x):
   if len(x) == 1:
