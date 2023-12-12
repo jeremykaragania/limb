@@ -136,7 +136,7 @@ def enc_bi(groups):
 def enc_sdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
   p = '0' if 'post' in groups.data else '1'
-  u = '0' if groups.data["sign"] == '-' else '1'
+  u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
   b = '0'
   w = '0' if p == '0' or 'pre' not in groups.data else '1'
   l = '0'
@@ -168,7 +168,7 @@ oprnd2_re = (
   f"(?P<reg>{reg_re('rm')})",
   f"(?P<imm>{imm_re('b12')})")
 
-sign_re = f"(?P<sign>[+|-]\s*)"
+sign_re = f"(?P<sign>[+|-]\s*)?"
 
 a_mode2_re = (
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\](?P<pre>!?)",
