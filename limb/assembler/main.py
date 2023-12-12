@@ -135,11 +135,11 @@ def enc_bi(groups):
 
 def enc_sdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
-  p = '0' if 'post' in groups.data else '1'
+  p = '0' if "post" in groups.data else '1'
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
-  b = '0'
+  b = '0' if 'b' not in groups.opcode else '1'
   w = '0' if p == '0' or 'pre' not in groups.data else '1'
-  l = '0'
+  l = '0' if groups.opcode["opcode"] == "str" else '1'
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
   a_mode = enc_a_mode(groups)
@@ -243,6 +243,8 @@ enc_instruction_re = (
   (instruction(opcode_re("b", True, None), data_re([[imm_re("label")]])), enc_bi),
   (instruction(opcode_re("bl", True, None), data_re([[imm_re("label")]])), enc_bi),
   (instruction(opcode_re("bx", True, None), data_re([[reg_re("rn")]])), enc_bei),
+  (instruction(opcode_re("ldr", True, ('b')), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
+  (instruction(opcode_re("str", True, ('b')), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
   (instruction(opcode_re("nop", True, None), ["^$"]), enc_nop),
 )
 
