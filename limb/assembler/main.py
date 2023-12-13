@@ -92,7 +92,7 @@ enc_oprnd2 = {
 
 def enc_dpi(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
-  oprnd2_type = list(groups.data)[1]
+  oprnd2_type = list(groups.data)[-2]
   i = '0' if oprnd2_type == "reg" else '1'
   opcode = enc_opcode[groups.opcode["opcode"]]
   s = '0' if 's' not in groups.opcode else '1'
