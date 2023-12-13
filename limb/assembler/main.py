@@ -186,6 +186,14 @@ a_mode2_re = (
   f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')})",
   f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx))")
 
+
+a_mode3_re = (
+  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b8')}\](?P<pre>!?)",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b8')})",
+  a_mode2_re[1],
+  a_mode2_re[8]
+)
+
 def fold(x):
   if len(x) == 1:
     return x
