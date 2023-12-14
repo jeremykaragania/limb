@@ -53,7 +53,7 @@ enc_cond = {
 
 enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 
-def enc_a_mode(groups):
+def enc_a_mode2(groups):
   if "b12_imm" in groups.data:
     offset = f"{int(groups.data['b12_imm']):0>12b}"
     return offset
@@ -63,6 +63,14 @@ def enc_a_mode(groups):
   else:
     rm = enc_reg[groups.data["rm_reg"]]
     return "00000000" + rm
+
+def enc_a_mode3(groups):
+  if "b8_imm" in groups.data:
+    imm = f"{int(groups.data['b8_imm']):0>8b}"
+    return (imm[:4], imm[4:])
+  else:
+    rm = enc_reg[groups.data["rm_reg"]]
+    return ("0000", rm)
 
 def enc_shift(groups):
   ret = ""
@@ -127,11 +135,19 @@ def enc_bei(groups):
   rn = enc_reg[groups.data["rn_reg"]]
   return cond + "000100101111111111110001" + rn
 
-def enc_bi(groups):
+def enc_hdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
-  l = '0' if groups.opcode["opcode"] == "b" else '1'
-  offset = f"{int(groups.data['label_imm']):0>24b}"
-  return cond + "101" + l + offset
+  p = '0' if "post" in groups.data else '1'
+  u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
+  i = '0' if "b8_imm" not in groups.data else '1'
+  w = '0' if p == '0' or 'pre' not in groups.data else '1'
+  l = '0' if groups.opcode["opcode"][0] == 's' else '1'
+  rn = enc_reg[groups.data["rn_reg"]]
+  rd = enc_reg[groups.data["rd_reg"]]
+  a_mode3 = enc_a_mode3(groups)
+  s = '0' if 's' not in groups.opcode["opcode"][-2:] else '1'
+  h = '0' if groups.opcode["opcode"][-1] != 'h' else '1'
+  return cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
 
 def enc_sdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
@@ -139,11 +155,17 @@ def enc_sdt(groups):
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
   b = '0' if 'b' not in groups.opcode else '1'
   w = '0' if p == '0' or 'pre' not in groups.data else '1'
-  l = '0' if groups.opcode["opcode"] == "str" else '1'
+  l = '0' if groups.opcode["opcode"][0] == 's' else '1'
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
-  a_mode = enc_a_mode(groups)
+  a_mode = enc_a_mode2(groups)
   return cond + "011" + p + u + b + w + l + rn + rd + a_mode
+
+def enc_bi(groups):
+  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  l = '0' if groups.opcode["opcode"] == "b" else '1'
+  offset = f"{int(groups.data['label_imm']):0>24b}"
+  return cond + "101" + l + offset
 
 def enc_nop(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
