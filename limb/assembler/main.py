@@ -153,7 +153,7 @@ def enc_sdt(groups):
   cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
   p = '0' if "post" in groups.data else '1'
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
-  b = '0' if 'b' not in groups.opcode else '1'
+  b = '0' if 'b' not in groups.opcode[-2:] else '1'
   w = '0' if p == '0' or 'pre' not in groups.data else '1'
   l = '0' if groups.opcode["opcode"][0] == 's' else '1'
   rn = enc_reg[groups.data["rn_reg"]]
@@ -249,34 +249,16 @@ def opcode_re(opcode, has_cond, has_s):
 data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else ['^' + "\s*,\s*".join(unfold(i)) + '$' for i in fold(res)]
 
 enc_instruction_re = (
-  (instruction(opcode_re(("mov",), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("mvn",), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("add",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("adc",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("sub",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("rsb",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("rsc",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re(("add", "adc", "sub", "rsb", "rsc"), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
   (instruction(opcode_re(("mul",), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")]])), enc_mi),
   (instruction(opcode_re(("mla",), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")], [reg_re("rn")]])), enc_mi),
-  (instruction(opcode_re(("umull",), True, True), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
-  (instruction(opcode_re(("umlal",), True, True), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
-  (instruction(opcode_re(("smull",), True, True), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
-  (instruction(opcode_re(("smlal",), True, True), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
-  (instruction(opcode_re(("cmp",), True, False), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("cmn",), True, False), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("tst",), True, False), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("teq",), True, False), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("and",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("eor",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("orr",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("bic",), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
-  (instruction(opcode_re(("b",), True, False), data_re([[imm_re("label")]])), enc_bi),
-  (instruction(opcode_re(("bl",), True, False), data_re([[imm_re("label")]])), enc_bi),
+  (instruction(opcode_re(("umull", "umlal", "smull", "smlal"), True, True), data_re([[reg_re("rd_lo")], [reg_re("rd_hi")], [reg_re("rm")], [reg_re("rn")]])), enc_mli),
+  (instruction(opcode_re(("cmp", "cmn", "tst", "teq"), True, False), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re(("and", "eor", "orr", "bic"), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
+  (instruction(opcode_re(("b", "bl"), True, False), data_re([[imm_re("label")]])), enc_bi),
   (instruction(opcode_re(("bx",), True, False), data_re([[reg_re("rn")]])), enc_bei),
-  (instruction(opcode_re(("ldr",), True, False), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
-  (instruction(opcode_re(("ldrb",), True, False), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
-  (instruction(opcode_re(("str",), True, False), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
-  (instruction(opcode_re(("strb",), True, False), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
+  (instruction(opcode_re(("ldr", "ldrb", "str", "strb"), True, False), data_re([[reg_re("rd")], a_mode2_re])), enc_sdt),
   (instruction(opcode_re(("nop",), True, None), ["^$"]), enc_nop)
 )
 
