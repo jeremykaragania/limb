@@ -8,7 +8,7 @@ instruction = namedtuple("instruction", ["opcode", "data"])
 
 assembler_message = namedtuple("assembler_message", ["file_name", "line_number", "type", "text"])
 
-enc_opcode = {
+opcode_t = {
   "mov": "1101",
   "mvn": "1111",
   "add": "0100",
@@ -33,7 +33,7 @@ enc_opcode = {
   "bic": "1110",
 }
 
-enc_cond = {
+cond_t = {
   "eq": "0000",
   "ne": "0001",
   "cs": "0010",
@@ -50,6 +50,8 @@ enc_cond = {
   "le": "1101",
   "al": "1110"
 }
+
+enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
 
 enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 
@@ -99,10 +101,10 @@ enc_oprnd2 = {
 }
 
 def enc_dpi(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   oprnd2_type = list(groups.data)[-2]
   i = '0' if oprnd2_type == "reg" else '1'
-  opcode = enc_opcode[groups.opcode["opcode"]]
+  opcode = opcode_t[groups.opcode["opcode"]]
   s = '0' if 's' not in groups.opcode else '1'
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
   rd = enc_reg[groups.data["rd_reg"]]
@@ -110,7 +112,7 @@ def enc_dpi(groups):
   return cond + "00" + i + opcode + s + rn + rd + oprnd2
 
 def enc_mi(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   a = '0' if groups.opcode["opcode"][2] == "u" else '1'
   s = '0' if 's' not in groups.opcode else '1'
   rd = enc_reg[groups.data["rd_reg"]]
@@ -120,7 +122,7 @@ def enc_mi(groups):
   return cond + "000000" + a + s + rd + rn + rs + "1001" + rm
 
 def enc_mli(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   u = '0' if 's' == groups.opcode["opcode"][0] else '1'
   a = '0' if groups.opcode["opcode"][2] == 'u' else '1'
   s = '0' if 's' not in groups.opcode else '1'
@@ -131,12 +133,12 @@ def enc_mli(groups):
   return cond + "00001" + u + a + s + rd_hi + rd_lo + rn + "1001" + rm
 
 def enc_bei(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   rn = enc_reg[groups.data["rn_reg"]]
   return cond + "000100101111111111110001" + rn
 
 def enc_hdt(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   p = '0' if "post" in groups.data else '1'
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
   i = '0' if "b8_imm" not in groups.data else '1'
@@ -150,7 +152,7 @@ def enc_hdt(groups):
   return cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
 
 def enc_sdt(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   p = '0' if "post" in groups.data else '1'
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
   b = '0' if 'b' not in groups.opcode[-2:] else '1'
@@ -162,18 +164,18 @@ def enc_sdt(groups):
   return cond + "011" + p + u + b + w + l + rn + rd + a_mode
 
 def enc_bi(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   l = '0' if groups.opcode["opcode"] == "b" else '1'
   offset = f"{int(groups.data['label_imm']):0>24b}"
   return cond + "101" + l + offset
 
 def enc_nop(groups):
-  cond = enc_cond[groups.opcode["cond"]] if "cond" in groups.opcode else enc_cond["al"]
+  cond = enc_cond(groups)
   return cond + "0011001000001111000000000000"
 
 suffix_re = "(?P<s>s)?"
 
-condition_re = f"(?P<cond>{'|'.join(enc_cond)})?"
+condition_re = f"(?P<cond>{'|'.join(cond_t)})?"
 
 imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
 
@@ -248,7 +250,7 @@ def opcode_re(opcode, has_cond, has_s):
 
 data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else ['^' + "\s*,\s*".join(unfold(i)) + '$' for i in fold(res)]
 
-enc_instruction_re = (
+instruction_t = (
   (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
   (instruction(opcode_re(("add", "adc", "sub", "rsb", "rsc"), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
   (instruction(opcode_re(("mul",), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")]])), enc_mi),
@@ -262,7 +264,7 @@ enc_instruction_re = (
   (instruction(opcode_re(("nop",), True, None), ["^$"]), enc_nop)
 )
 
-enc_instruction = [(instruction(re.compile(i.opcode), [re.compile(k) for k in i.data]), j) for i, j in enc_instruction_re]
+enc_instruction = [(instruction(re.compile(i.opcode), [re.compile(k) for k in i.data]), j) for i, j in instruction_t]
 
 def preprocess(messages, filenames):
   files = {}
