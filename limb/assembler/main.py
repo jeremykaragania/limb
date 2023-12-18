@@ -91,10 +91,7 @@ def enc_shift(groups):
   return ret
 
 enc_oprnd2 = {
-  "lsl": lambda x: enc_shift(x),
-  "lsr": lambda x: enc_shift(x),
-  "asr": lambda x: enc_shift(x),
-  "ror": lambda x: enc_shift(x),
+  "shift": lambda x: enc_shift(x),
   "rrx": lambda x: "00000110" + enc_reg[x.data["rm_reg"]],
   "reg": lambda x: enc_reg[x.data["rm_reg"]],
   "imm": lambda x: f"{int(x.data['b12_imm']):0>12b}"
@@ -188,7 +185,7 @@ oprnd2_re = (
   f"(?P<lsr>{shift_re('lsr')})",
   f"(?P<asr>{shift_re('asr')})",
   f"(?P<ror>{shift_re('ror')})",
-  f"(?P<rrx>{reg_re('rrx')}\s*,\s*rrx)",
+  f"(?P<rrx>{reg_re('rm')}\s+rrx)",
   f"(?P<reg>{reg_re('rm')})",
   f"(?P<imm>{imm_re('b12')})")
 
