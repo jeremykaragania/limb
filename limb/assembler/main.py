@@ -152,7 +152,7 @@ def enc_sdt(groups):
   cond = enc_cond(groups)
   p = '0' if "post" in groups.data else '1'
   u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
-  b = '0' if 'b' not in groups.opcode[-2:] else '1'
+  b = '0' if 'b' not in groups.opcode["opcode"][-2:] else '1'
   w = '0' if p == '0' or 'pre' not in groups.data else '1'
   l = '0' if groups.opcode["opcode"][0] == 's' else '1'
   rn = enc_reg[groups.data["rn_reg"]]
@@ -178,33 +178,39 @@ imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
 
-shift_re = lambda group: f"{reg_re('rm')}\s*(?P<shift>{group})\s+(?:{reg_re(f'rs')}|{imm_re(f'b5')})"
+sign_re = f"(?P<sign>[+|-]\s*)?"
+
+def shift_re(group, is_oprnd2):
+  ret = '' if is_oprnd2 else sign_re
+  ret += f"{reg_re('rm')}\s*"
+  ret += '' if is_oprnd2 else ",\s*"
+  ret += f"(?P<shift>{group})\s+"
+  ret += f"(?:{reg_re(f'rs')}|{imm_re(f'b5')})" if is_oprnd2 else f"{imm_re('b5')}"
+  return ret
 
 oprnd2_re = (
-  f"(?P<lsl>{shift_re('lsl')})",
-  f"(?P<lsr>{shift_re('lsr')})",
-  f"(?P<asr>{shift_re('asr')})",
-  f"(?P<ror>{shift_re('ror')})",
+  f"(?P<lsl>{shift_re('lsl', True)})",
+  f"(?P<lsr>{shift_re('lsr', True)})",
+  f"(?P<asr>{shift_re('asr', True)})",
+  f"(?P<ror>{shift_re('ror', True)})",
   f"(?P<rrx>{reg_re('rm')}\s+rrx)",
   f"(?P<reg>{reg_re('rm')})",
   f"(?P<imm>{imm_re('b12')})")
 
-sign_re = f"(?P<sign>[+|-]\s*)?"
-
 a_mode2_re = (
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\](?P<pre>!?)",
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{shift_re('lsl', False)}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{shift_re('lsr', False)}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{shift_re('asr', False)}\](?P<pre>!?)",
+  f"\[{reg_re('rn')}\s*,\s*{shift_re('ror', False)}\](?P<pre>!?)",
   f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\](?P<pre>!?)",
   f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b12')})",
   f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsl)\s+{imm_re('b5')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>lsr)\s+{imm_re('b5')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>asr)\s+{imm_re('b5')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>ror)\s+{imm_re('b5')})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsl', False)})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsr', False)})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('asr', False)})",
+  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('ror', False)})",
   f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx))")
 
 
