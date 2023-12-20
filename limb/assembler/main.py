@@ -174,7 +174,7 @@ suffix_re = "(?P<s>s)?"
 
 condition_re = f"(?P<cond>{'|'.join(cond_t)})?"
 
-imm_re = lambda group: f"(?P<{group}_imm>[\d]*)"
+imm_re = lambda group: f"#(?P<{group}_imm>[\d]*)"
 
 reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
 
