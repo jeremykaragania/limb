@@ -8,9 +8,13 @@ class header:
     self.e_phoff = None
     self.e_shoff = None
     self.e_flags = bytes((0x00, 0x00, 0x00, 0x05))
-    self.e_ehsize = None
+    self.e_ehsize = bytes((0x00, 0x34))
     self.e_phentsize = None
     self.e_phnum = None
     self.e_shentsize = None
     self.e_shnum = None
     self.e_shstrndx = None
+
+s_shstrtab = bytes("\0.symtab\0.strtab\0.shstrtab\0.text\0.data\0.bss\0.ARM.attributes\0", "ascii")
+
+s_text = lambda x: bytes().join([int(i, 16).to_bytes(4, "little") for i in x])
