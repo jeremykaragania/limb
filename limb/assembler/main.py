@@ -331,9 +331,11 @@ def main():
         else:
           objfile = args[i+1]
           del args[i+1]
+      else:
+        messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
     else:
       filenames.append(j)
-  obj = assemble(messages, preprocess(messages, set(filenames)))
+  obj = "" if messages else assemble(messages, preprocess(messages, set(filenames)))
   if messages:
     message_to_str = lambda message: (f"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
     message_strs = [message_to_str(i) for i in messages]
