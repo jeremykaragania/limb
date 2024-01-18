@@ -18,15 +18,12 @@ class file:
     self.header.e_shoff = (int.from_bytes(self.header.e_ehsize, "little") + sum([len(i) for i in self.sections.values()])).to_bytes(4, "little")
     self.header.e_shnum = len(self.section_header_table).to_bytes(2, "little")
     self.header.e_shstrndx = (len(self.section_header_table) - 1).to_bytes(2, "little")
-    x = len(bytes(self.header) + bytes().join([bytes(i) for i in self.sections.values()]))
+    x = len(to_bytes(self.header) + bytes().join(self.sections.values()))
     offset = 0
     for i, j in enumerate(self.sections):
-      self.section_header_table[j].sh_offset = (len(bytes(self.header)) + offset).to_bytes(4, "little")
-      self.section_header_table[j].sh_size = len(bytes(self.sections[j])).to_bytes(4, "little")
+      self.section_header_table[j].sh_offset = (len(to_bytes(self.header)) + offset).to_bytes(4, "little")
+      self.section_header_table[j].sh_size = len(self.sections[j]).to_bytes(4, "little")
       offset += len(bytes(self.sections[j]))
-
-  def __bytes__(self):
-    return bytes(self.header) + bytes().join([bytes(i) for i in self.sections.values()]) + bytes().join([bytes(i) for i in self.section_header_table.values()])
 
 class header:
   def __init__(self):
@@ -44,9 +41,6 @@ class header:
     self.e_shentsize = bytes((0x28, 0x00))
     self.e_shnum = None
     self.e_shstrndx = None
-
-  def __bytes__(self):
-    return to_bytes(self)
 
 s_shstrtab = bytes("\0.text\0.data\0.bss\0.symtab\0.strtab\0.shstrtab\0", "ascii")
 
@@ -68,9 +62,6 @@ class section_header:
     self.sh_info = sh_info
     self.sh_addralign = sh_addralign
     self.sh_entsize = sh_entsize
-
-  def __bytes__(self):
-    return to_bytes(self)
 
 sh_undef = section_header(
   sh_name=bytes((0x00, 0x00, 0x00, 0x00)),
@@ -132,4 +123,8 @@ sh_shstrtab = section_header(
   sh_addralign=bytes((0x01, 0x00, 0x00, 0x00)),
   sh_entsize=bytes((0x00, 0x00, 0x00, 0x00)))
 
-to_bytes = lambda x: bytes().join(vars(x).values())
+def to_bytes(x):
+  if isinstance(x, file):
+    return to_bytes(x.header) + bytes().join([bytes(i) for i in x.sections.values()]) + bytes().join([to_bytes(i) for i in x.section_header_table.values()])
+  else:
+    return bytes().join(vars(x).values())
