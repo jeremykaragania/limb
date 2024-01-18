@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import elf
 import re
 import sys
 from collections import namedtuple
@@ -322,15 +323,20 @@ def main():
   args = sys.argv[1:]
   filenames = []
   messages = []
-  objfile = "a.out"
+  options = {
+    "objfile": "a.out",
+    "format": 't'
+  }
   for i, j in enumerate(args):
     if j[0] == '-':
       if j[1] == 'o':
         if j[2:]:
-          objfile = j[2:]
+          options["objfile"] = j[2:]
         else:
-          objfile = args[i+1]
+          options["objfile"] = args[i+1]
           del args[i+1]
+      elif j[1:8] == "format=" and j[8:] in ('t', 'b'):
+        options["format"] = j[8:]
       else:
         messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
     else:
@@ -342,7 +348,8 @@ def main():
     print("Assembler messages:")
     print('\n'.join(message_strs))
   else:
-    open(objfile, "w").write('\n'.join(obj))
+    out = '\n'.join(obj) if options["format"] == 't' else elf.to_bytes(elf.file(obj))
+    open(options["objfile"], f"w{options['format']}").write(out)
 
 if __name__ == "__main__":
   main()
