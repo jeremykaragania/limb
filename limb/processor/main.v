@@ -4,7 +4,6 @@ module random_access_memory(
   din,
   dout,
   rw);
-  parameter filename = "boot_rom";
   input clk;
   input [31:0] a;
   input [31:0] din;
@@ -13,7 +12,7 @@ module random_access_memory(
   reg [31:0] mem [0:8191];
 
   initial begin
-    $readmemh(filename, mem);
+    $readmemh(`filename, mem);
   end
 
   always @ (posedge clk) begin

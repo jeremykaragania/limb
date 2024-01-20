@@ -8,13 +8,13 @@ git clone https://github.com/jeremykaragania/limb.git
 ```
 
 ## Usage
-Assemble source code.
+Assemble source code to processor memory.
 ```bash
-python3 assembler/main.py -o boot_rom infile
+python3 assembler/main.py -o memory infile
 ```
-Compile test bench.
+Compile test bench with processor memory.
 ```bash
-iverilog -I processor/ -o test_bench processor/test_bench.v
+iverilog -I processor/ -o test_bench memory processor/test_bench.v
 ```
 Execute test bench.
 ```bash
