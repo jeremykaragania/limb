@@ -52,6 +52,11 @@ cond_t = {
   "al": "1110"
 }
 
+def check_length(x, length):
+  if (len(x) > length):
+    return [assembler_message(None, None, "Error", f"invalid constant {(hex(int(x, 2)))} after fixup")]
+  return []
+
 enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
 
 enc_reg = {str(i):f"{i:04b}" for i in range(14)}
@@ -59,23 +64,24 @@ enc_reg = {str(i):f"{i:04b}" for i in range(14)}
 def enc_a_mode2(groups):
   if "b12_imm" in groups.data:
     offset = f"{int(groups.data['b12_imm']):0>12b}"
-    return offset
+    return check_length(offset, 12), offset
   elif "shift" in groups.data:
-    shift = enc_shift(groups)
-    return shift
+    messages, shift = enc_shift(groups)
+    return messages, shift
   else:
     rm = enc_reg[groups.data["rm_reg"]]
-    return "00000000" + rm
+    return [], "00000000" + rm
 
 def enc_a_mode3(groups):
   if "b8_imm" in groups.data:
     imm = f"{int(groups.data['b8_imm']):0>8b}"
-    return (imm[:4], imm[4:])
+    return check_length(imm, 8), (imm[:4], imm[4:])
   else:
     rm = enc_reg[groups.data["rm_reg"]]
-    return ("0000", rm)
+    return [], ("0000", rm)
 
 def enc_shift(groups):
+  messages = []
   ret = ""
   enc_shift_type = {
     "lsl": "00",
@@ -85,17 +91,19 @@ def enc_shift(groups):
   }
   shift_type = enc_shift_type[groups.data["shift"]]
   if "b5_imm" in groups.data:
-    ret = f"{int(groups.data['b5_imm']):0>5b}" + shift_type + '0'
+    ret = f"{int(groups.data['b5_imm']):0>5b}"
+    messages = check_length(ret, 5)
+    ret += shift_type + '0'
   else:
     ret = enc_reg[groups.data["rs_reg"]] + '0' + shift_type + '1'
   ret += enc_reg[groups.data["rm_reg"]]
-  return ret
+  return messages, ret
 
 enc_oprnd2 = {
   "shift": lambda x: enc_shift(x),
-  "rrx": lambda x: "00000110" + enc_reg[x.data["rm_reg"]],
-  "reg": lambda x: enc_reg[x.data["rm_reg"]],
-  "imm": lambda x: f"{int(x.data['b12_imm']):0>12b}"
+  "rrx": lambda x: ([], "00000110" + enc_reg[x.data["rm_reg"]]),
+  "reg": lambda x: ([], enc_reg[x.data["rm_reg"]]),
+  "imm": lambda x: (check_length(f"{int(x.data['b12_imm']):0>12b}", 12), f"{int(x.data['b12_imm']):0>12b}")
 }
 
 def enc_dpi(groups):
@@ -106,8 +114,8 @@ def enc_dpi(groups):
   s = '0' if 's' not in groups.opcode else '1'
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
   rd = enc_reg[groups.data["rd_reg"]]
-  oprnd2 = enc_oprnd2[oprnd2_type](groups)
-  return cond + "00" + i + opcode + s + rn + rd + oprnd2
+  messages, oprnd2 = enc_oprnd2[oprnd2_type](groups)
+  return messages, cond + "00" + i + opcode + s + rn + rd + oprnd2
 
 def enc_mi(groups):
   cond = enc_cond(groups)
@@ -117,7 +125,7 @@ def enc_mi(groups):
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
   rs = enc_reg[groups.data["rs_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
-  return cond + "000000" + a + s + rd + rn + rs + "1001" + rm
+  return [], cond + "000000" + a + s + rd + rn + rs + "1001" + rm
 
 def enc_mli(groups):
   cond = enc_cond(groups)
@@ -128,12 +136,12 @@ def enc_mli(groups):
   rd_lo = enc_reg[groups.data["rd_lo_reg"]]
   rn = enc_reg[groups.data["rn_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
-  return cond + "00001" + u + a + s + rd_hi + rd_lo + rn + "1001" + rm
+  return [], cond + "00001" + u + a + s + rd_hi + rd_lo + rn + "1001" + rm
 
 def enc_bei(groups):
   cond = enc_cond(groups)
   rn = enc_reg[groups.data["rn_reg"]]
-  return cond + "000100101111111111110001" + rn
+  return [], cond + "000100101111111111110001" + rn
 
 def enc_hdt(groups):
   cond = enc_cond(groups)
@@ -147,7 +155,7 @@ def enc_hdt(groups):
   a_mode3 = enc_a_mode3(groups)
   s = '0' if 's' not in groups.opcode["opcode"][-2:] else '1'
   h = '0' if groups.opcode["opcode"][-1] != 'h' else '1'
-  return cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
+  return [], cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
 
 def enc_sdt(groups):
   cond = enc_cond(groups)
@@ -158,18 +166,18 @@ def enc_sdt(groups):
   l = '0' if groups.opcode["opcode"][0] == 's' else '1'
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
-  a_mode = enc_a_mode2(groups)
-  return cond + "011" + p + u + b + w + l + rn + rd + a_mode
+  messages, a_mode = enc_a_mode2(groups)
+  return messages, cond + "011" + p + u + b + w + l + rn + rd + a_mode
 
 def enc_bi(groups):
   cond = enc_cond(groups)
   l = '0' if groups.opcode["opcode"] == "b" else '1'
   offset = f"{int(groups.data['label_imm']):0>24b}"
-  return cond + "101" + l + offset
+  return [], cond + "101" + l + offset
 
 def enc_nop(groups):
   cond = enc_cond(groups)
-  return cond + "0011001000001111000000000000"
+  return [], cond + "0011001000001111000000000000"
 
 suffix_re = "(?P<s>s)?"
 
@@ -309,7 +317,8 @@ def assemble(messages, files):
               if not messages:
                 data_groups = {j:k for j, k in data_match.groupdict().items() if k}
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
-                i_enc = fn(instruction(opcode_groups, data_groups))
+                i_messages, i_enc = fn(instruction(opcode_groups, data_groups))
+                messages += [assembler_message(f, line, i.type, i.text) for i in i_messages]
                 obj.append((f"{int(i_enc, 2):<04x}"))
                 break
           if not data_match:
