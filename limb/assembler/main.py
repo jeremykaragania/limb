@@ -356,6 +356,7 @@ def main():
     message_strs = [message_to_str(i) for i in messages]
     print("Assembler messages:")
     print('\n'.join(message_strs))
+    sys.exit(1)
   else:
     if options["format"] == 't':
       out = '\n'.join(obj)
@@ -364,6 +365,7 @@ def main():
     else:
       out = elf.to_bytes(elf.file(obj))
     open(options["objfile"], f"w{options['format']}").write(out)
+    sys.exit(0)
 
 if __name__ == "__main__":
   main()
