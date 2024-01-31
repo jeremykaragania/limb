@@ -102,7 +102,7 @@ def enc_shift(groups):
 enc_oprnd2 = {
   "shift": lambda x: enc_shift(x),
   "rrx": lambda x: ([], "00000110" + enc_reg[x.data["rm_reg"]]),
-  "reg": lambda x: ([], enc_reg[x.data["rm_reg"]]),
+  "reg": lambda x: ([], "00000000" + enc_reg[x.data["rm_reg"]]),
   "imm": lambda x: (check_length(f"{int(x.data['b12_imm']):0>12b}", 12), f"{int(x.data['b12_imm']):0>12b}")
 }
 
