@@ -9,10 +9,3 @@ mov r1, #2
 nop
 nop
 sub r3, r0, r1
-
-mov r0, #3
-mov r1, #4
-nop
-nop
-nop
-mul r4, r0, r1

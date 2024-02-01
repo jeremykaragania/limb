@@ -1,523 +1,358 @@
-module random_access_memory(
+`define AL 4'b1110
+`define NOP 28'b0011001000001111000000000000
+
+module memory_controller (
   clk,
-  a,
-  din,
-  dout,
-  rw);
+  addr,
+  wdata,
+  rdata,
+  abort,
+  write,
+  size,
+  prot,
+  trans);
+
   input clk;
-  input [31:0] a;
-  input [31:0] din;
-  output reg [31:0] dout;
-  input rw;
-  reg [31:0] mem [0:8191];
+  input [31:0] addr;
+  input [31:0] wdata;
+  output reg [31:0] rdata;
+  output reg abort;
+  input write;
+  input size;
+  input [1:0] prot;
+  input [1:0] trans;
+  reg [31:0] memory [0:8191];
 
   initial begin
-    $readmemh(`filename, mem);
+    $readmemh(`filename, memory);
   end
 
   always @ (posedge clk) begin
-    if (rw) begin
-      mem[a] <= din;
-    end
-    else begin
-      dout <= mem[a];
+    if (trans == 2'b10 || trans == 2'b11) begin
+      case (write)
+        0: begin
+          rdata <= memory[addr];
+        end
+        1: begin
+          memory[addr] <= wdata;
+        end
+      endcase
     end
   end
 endmodule
 
-module control_unit(
-  clk);
+module processor (
+  clk,
+  n_reset);
+  // Clock.
   input clk;
-  reg [31:0] if_ram_a;
-  reg [31:0] if_ram_din;
-  wire [31:0] if_ram_dout;
-  reg if_ram_rw;
-  wire [31:0] if_instruction = if_ram_dout;
-  wire [3:0] if_cond = if_instruction[31:28];
-  wire if_oprnd2_type = if_instruction[25];
-  wire [3:0] if_rn = if_instruction[19:16];
-  wire [3:0] if_rd = if_instruction[15:12];
-  wire [3:0] if_rs = if_instruction[11:8];
-  wire [3:0] if_rm = if_instruction[3:0];
-  wire [11:0] if_oprnd2 = if_instruction[11:0];
-  wire [3:0] if_opcode = if_instruction[24:21];
-  reg [3:0] id_cond;
-  reg id_oprnd2_type;
-  reg [3:0] id_rn;
-  reg [3:0] id_rd;
-  reg [3:0] id_rs;
-  reg [3:0] id_rm;
-  reg [11:0] id_oprnd2;
-  reg [3:0] id_opcode;
-  reg id_do_execute;
-  reg id_do_mul;
-  reg id_do_branch;
-  reg [1:0] id_do_writeback;
-  reg [23:0] id_offset;
-  reg [31:0] id_alu_a;
-  reg [31:0] id_alu_b;
-  reg [31:0] id_alu_c;
-  reg [31:0] id_alu_d;
-  reg [3:0]  id_alu_destinations [1:0];
-  reg [1:0] ie_do_writeback;
-  reg [3:0]  ie_alu_destinations [1:0];
-  wire [63:0] ie_alu_result;
-  reg [1:0] wb_do_writeback;
-  reg [63:0] wb_source;
-  reg [3:0] wb_destinations [1:0];
+
+  // Interrupts.
+  input n_reset;
+
+  // Memory interface.
+  output [31:0] addr;
+  output [31:0] wdata;
+  input [31:0] rdata;
+  input abort;
+  output reg write;
+  output reg size;
+  output reg [1:0] prot;
+  output reg [1:0] trans;
+
+  // Instruction pipeline.
+  reg [31:0] f_instr;
+  reg [31:0] d_instr;
+  reg [31:0] e_instr;
+  reg [3:0] d_cond;
+  reg e_exec;
+  reg [11:0] e_oprnd2;
+  reg [11:0] e_oprnd2_t;
+  reg [3:0] e_dest;
+  reg [23:0] e_offset;
+  reg e_write_dest;
+  reg e_write_cpsr;
+
+  // Register writeback.
+  reg [3:0] dest;
+  reg write_dest;
+  reg write_cpsr;
+
+  // Instruction cycle timing.
+  reg [31:0] e_b_bl_cycle;
+  reg [31:0] e_do_cycle;
+
+  // Arithmetic logic unit.
+  output reg [31:0] a;
+  output reg [31:0] b;
+  output reg [3:0] opcode;
+  input [31:0] result;
+
+  // Internal.
   reg [31:0] r [0:30];
   reg [31:0] cpsr;
-  random_access_memory ram(
-    .clk(clk),
-    .a(if_ram_a),
-    .din(if_ram_din),
-    .dout(if_ram_dout),
-    .rw(if_ram_rw));
-  arithmetic_logic_unit alu(
-    .clk(clk),
-    .do_execute(id_do_execute),
-    .do_mul(id_do_mul),
-    .opcode(id_opcode),
-    .a(id_alu_a),
-    .b(id_alu_b),
-    .c(id_alu_c),
-    .d(id_alu_d),
-    .result(ie_alu_result));
-
-  task forward_operands;
-    begin
-      if (if_rn == id_alu_destinations[0]) begin
-        id_alu_a <= wb_source[31:0];
-      end
-      else begin
-        id_alu_a <= r[if_rn];
-      end
-      if (!if_oprnd2_type && if_oprnd2 == id_alu_destinations[0]) begin
-        id_alu_b <= wb_source[31:0];
-      end
-      else begin
-        id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-      end
-    end
-  endtask
+  reg [31:0] addr_reg;
+  reg write_reg;
+  reg size_reg;
+  reg [1:0] prot_reg;
+  reg [1:0] trans_reg;
 
   initial begin
+    write = 0;
+    size = 1'b10;
+    prot = 2'b10;
+    trans = 2'b11;
     r[15] = 0;
     cpsr = 0;
   end
 
   always @ (posedge clk) begin
-    if_ram_a <= r[15];
-    if_ram_rw <= 0;
-    id_cond <= if_instruction[31:28];
-    id_oprnd2_type <= if_instruction[25];
-    id_rn <= if_instruction[19:16];
-    id_rd <= if_instruction[15:12];
-    id_rs <= if_instruction[11:8];
-    id_rm <= if_instruction[3:0];
-    id_oprnd2 <= if_instruction[11:0];
-    id_opcode <= if_instruction[24:21];
-    ie_do_writeback <= id_do_writeback;
-    ie_alu_destinations[0] <= id_alu_destinations[0];
-    ie_alu_destinations[1] <= id_alu_destinations[1];
-    wb_do_writeback <= ie_do_writeback;
-    wb_source <= ie_alu_result;
-    wb_destinations[0] <=  ie_alu_destinations[0];
-    wb_destinations[1] <=  ie_alu_destinations[1];
+    f_instr <= rdata;
+    d_instr <= f_instr;
+    e_instr <= d_instr;
+    d_cond <= f_instr[31:28];
+    addr_reg <= r[15];
+    write_reg <= write;
 
-    case (if_cond)
-      4'b0000: begin // eq
+    trans_reg <= trans;
+
+    if (d_instr[27:25] == 3'b101) begin // Branch or branch with link.
+      e_b_bl_cycle <= 1;
+      e_offset <= d_instr[23:0];
+      e_write_dest <= 0;
+      e_write_cpsr <= 0;
+    end
+    else if (d_instr[27:0] == `NOP) begin // No operation.
+      e_write_dest <= 0;
+      e_write_cpsr <= 0;
+    end
+    else if (d_instr[25] == 0 || d_instr[25] == 1) begin // Data processing instruction.
+      e_do_cycle <= 1;
+      e_oprnd2_t <= d_instr[25];
+      e_oprnd2 <= d_instr[11:0];
+      e_dest <= d_instr[15:12];
+      opcode <= d_instr[24:21];
+      a <= r[d_instr[19:16]];
+      b <= d_instr[25] ? d_instr[11:0] : r[d_instr[11:0]];
+      if (d_instr[24:21] == 4'b1010 || d_instr[24:21] == 4'b1011 || d_instr[24:21] == 4'b1000 || d_instr[24:21] == 4'b1001) begin
+        e_write_dest <= 0;
+        e_write_cpsr <= 1;
+      end
+      else begin
+        e_write_dest <= 1;
+        e_write_cpsr <= 0;
+      end
+    end
+    else begin
+      e_write_dest <= 0;
+      e_write_cpsr <= 0;
+      e_exec <= 0;
+    end
+
+    case (d_cond)
+      4'b0000: begin // EQ
         if (cpsr[30]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0001: begin // ne
+      4'b0001: begin // NE
         if (!cpsr[30]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0010: begin // cs
+      4'b0010: begin // CS
         if (cpsr[29]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0011: begin // cc
+      4'b0011: begin // CC
         if (!cpsr[29]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0100: begin // mi
+      4'b0100: begin // MI
         if (cpsr[31]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0101: begin // pl
+      4'b0101: begin // PL
         if (!cpsr[31]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0110: begin // vs
+      4'b0110: begin // VS
         if (cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b0111: begin // vc
+      4'b0111: begin // VC
         if (!cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1000: begin // hi
+      4'b1000: begin // HI
         if (cpsr[29] || !cpsr[30]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1001: begin // ls
+      4'b1001: begin // LS
         if (!cpsr[29] || cpsr[30]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1010: begin // ge
+      4'b1010: begin // GE
         if (cpsr[31] == cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1011: begin // lt
+      4'b1011: begin // LT
         if (cpsr[31] != cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1100: begin // gt
+      4'b1100: begin // GT
         if (!cpsr[28] || cpsr[31] == cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1101: begin // le
+      4'b1101: begin // LE
         if (cpsr[28] || cpsr[31] != cpsr[28]) begin
-          id_do_execute <= 1;
+          e_exec <= 1;
         end
       end
-      4'b1110: begin // al
-        id_do_execute <= 1;
-      end
-    endcase
-    if (!if_instruction[25] && if_instruction[4]) begin
-      id_do_mul <= 1;
-      case (if_opcode)
-        4'b0000: begin // mul
-          id_alu_destinations[0] <= if_rn;
-          id_alu_a <= r[if_rd];
-          id_alu_b <= r[if_rs];
-          id_do_writeback <= 1;
-        end
-        4'b0001: begin // mla
-          id_alu_destinations[0] <= if_rn;
-          id_alu_a <= r[if_rd];
-          id_alu_b <= r[if_rs];
-          id_alu_c <= r[if_rm];
-          id_do_writeback <= 1;
-        end
-        4'b0100: begin // umull
-          id_alu_destinations[0] <= if_rd;
-          id_alu_destinations[1] <= if_rn;
-          id_alu_a <= r[if_rm];
-          id_alu_b <= r[if_rs];
-          id_do_writeback <= 3;
-        end
-        4'b0101: begin // umlal
-          id_alu_destinations[0] <= if_rd;
-          id_alu_destinations[1] <= if_rn;
-          id_alu_a <= r[if_rm];
-          id_alu_b <= r[if_rs];
-          id_alu_c <= r[if_rd];
-          id_alu_d <= r[if_rn];
-          id_do_writeback <= 3;
-        end
-        4'b0110: begin // smull
-          id_alu_destinations[0] <= if_rd;
-          id_alu_destinations[1] <= if_rn;
-          id_alu_a <= r[if_rm];
-          id_alu_b <= r[if_rs];
-          id_do_writeback <= 3;
-        end
-        4'b0111: begin // smlal
-          id_alu_destinations[0] <= if_rd;
-          id_alu_destinations[1] <= if_rn;
-          id_alu_a <= r[if_rm];
-          id_alu_b <= r[if_rs];
-          id_alu_c <= r[if_rd];
-          id_alu_d <= r[if_rn];
-          id_do_writeback <= 3;
-        end
-      endcase
-    end
-    else if (if_instruction[27:24] == 4'b1010) begin // b
-      id_do_writeback <= 0;
-      id_do_execute <= 0;
-      id_do_branch <= 1;
-      id_offset <= if_instruction[23:0];
-    end
-    else if (if_instruction[27:24] == 4'b0011 && if_instruction[15:12] == 4'b1111) begin // nop
-      id_do_writeback <= 0;
-      id_do_execute <= 0;
-    end
-    else begin
-      case (if_opcode)
-        4'b1101: begin // mov
-          id_alu_destinations[0] <= if_rd;
-          id_do_writeback <= 1;
-          if (!if_oprnd2_type) begin
-            if ((id_do_writeback) && ((if_oprnd2 == id_alu_destinations[0]))) begin
-              id_alu_a <= id_alu_a;
-            end
-            else if ((ie_do_writeback) && ((if_oprnd2 == ie_alu_destinations[0]))) begin
-              id_alu_a <= ie_alu_result;
-            end
-            else if ((wb_do_writeback) && ((if_oprnd2 == wb_destinations[0]))) begin
-              id_alu_a <= wb_source;
-            end
-            else begin
-              id_alu_a <= r[if_oprnd2];
-            end
-          end
-          else begin
-            id_alu_a <= if_oprnd2;
-          end
-        end
-        4'b1101: begin // mvn
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-        4'b0100: begin // add
-          id_alu_destinations[0] <= if_rd;
-          id_do_writeback <= 1;
-          forward_operands();
-        end
-        4'b0101: begin // adc
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 1;
-        end
-        4'b0010: begin // sub
-          id_alu_destinations[0] <= if_rd;
-          id_do_writeback <= 1;
-          forward_operands();
-        end
-        4'b0110: begin // sbc
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 1;
-        end
-        4'b0011: begin // rsb
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-        4'b0111: begin // rsc
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 1;
-        end
-        4'b1010: begin // cmp
-          id_alu_a <= r[if_rd];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 2;
-        end
-        4'b1011: begin // cmn
-          id_alu_a <= r[if_rd];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 2;
-        end
-        4'b1000: begin // tst
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 2;
-        end
-        4'b1001: begin // teq
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_alu_c <= cpsr[31:0];
-          id_do_writeback <= 2;
-        end
-        4'b0000: begin // and
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-        4'b0001: begin // eor
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-        4'b1100: begin // orr
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-        4'b1110: begin // bic
-          id_alu_destinations[0] <= if_rd;
-          id_alu_a <= r[if_rn];
-          id_alu_b <= !if_oprnd2_type ? r[if_oprnd2] : if_oprnd2;
-          id_do_writeback <= 1;
-        end
-      endcase
-    end
-    case (wb_do_writeback)
-      1: begin
-        r[wb_destinations[0]] <= wb_source[31:0];
-      end
-      2: begin
-        cpsr <= wb_source[31:0];
-      end
-      3: begin
-        r[wb_destinations[0]] <= wb_source[63:32];
-        r[wb_destinations[1]] <= wb_source[31:0];
+      4'b1110: begin // AL
+        e_exec <= 1;
       end
     endcase
-    if (id_do_branch) begin
-      r[15] <= id_offset;
+
+    if (e_exec) begin
+      write_dest <= e_write_dest;
+      write_cpsr <= e_write_cpsr;
+      if (e_b_bl_cycle) begin // Branch or branch with link.
+        f_instr <= {`AL, `NOP};
+        d_instr <= {`AL, `NOP};
+        e_instr <= {`AL, `NOP};
+        write_dest <= 0;
+        case (e_b_bl_cycle)
+          1: begin
+            trans <= 2'b10;
+            r[15] <= e_offset;
+            e_b_bl_cycle <= e_b_bl_cycle + 1;
+          end
+          2: begin
+            trans <= 2'b11;
+            r[15] <= r[15] + 1;
+            e_b_bl_cycle <= e_b_bl_cycle + 1;
+          end
+          3: begin
+            trans <= 2'b11;
+            r[15] <= r[15] + 1;
+            e_b_bl_cycle <= 0;
+          end
+        endcase
+      end
+      else if (e_do_cycle) begin // Data operation.
+        trans <= 2'b11;
+        r[15] <= r[15] + 1;
+        dest <= e_dest;
+      end
+      else begin // No operation.
+        trans <= 2'b11;
+        r[15] <= r[15] + 1;
+      end
     end
     else begin
+      trans <= 2'b11;
       r[15] <= r[15] + 1;
+      write <= 0;
+    end
+
+    if (write_dest) begin
+      r[dest] <= result;
+    end
+    else if (write_cpsr) begin
+      cpsr <= result;
     end
   end
 endmodule
 
 module arithmetic_logic_unit(
   clk,
-  do_execute,
-  do_mul,
-  opcode,
   a,
   b,
-  c,
-  d,
+  cpsr,
+  opcode,
   result);
+
   input clk;
-  input do_execute;
-  input do_mul;
-  input [3:0] opcode;
   input [31:0] a;
   input [31:0] b;
-  input [31:0] c;
-  input [31:0] d;
-  output reg [63:0] result;
-  reg [31:0] r [3:0];
+  input [31:0] cpsr;
+  input [0:3] opcode;
+  output reg [31:0] result;
 
   always @ (posedge clk) begin
-    if (do_execute) begin
-      if (do_mul) begin
-        case (opcode)
-          4'b0000: begin // mul
-            result <= a * b;
-          end
-          4'b0001: begin // mla
-            result <= a * b + c;
-          end
-          4'b0100: begin // umull
-            result <= a * b;
-          end
-          4'b0101: begin // umlal
-            result <= a * b + {c, d};
-          end
-          4'b0110: begin // smull
-            result <= $signed(a) * $signed(b);
-          end
-          4'b0111: begin // smlal
-            result <= $signed(a) * $signed(b) + {c, d};
-          end
-        endcase
+    case (opcode)
+      4'b1101: begin // MOv
+        result <= b;
       end
-      else begin
-        case (opcode)
-          4'b1101: begin // mov
-            result <= a;
-          end
-          4'b1111: begin // mvn
-            result <= !a;
-          end
-          4'b0100: begin // add
-            result <= a + b;
-          end
-          4'b0101: begin // adc
-            result <= a + b + c[29];
-          end
-          4'b0010: begin // sub
-            result <= a - b;
-          end
-          4'b0110: begin // sbc
-            result <= a - b - c[29];
-          end
-          4'b0011: begin // if_rsb
-            result <= a - b;
-          end
-          4'b0111: begin // if_rsc
-            result <= a - b - c[29];
-          end
-          4'b1010: begin // cmp
-            r[0] = a + ~b + 1;
-            r[1] = $signed(a) + $signed(~b) + 1;
-            result[31] = r[0][31];
-            result[30] = !r[0];
-            result[29] = r[0][30:0] != r[0];
-            result[28] = $signed(r[0][30:0]) != r[1];
-            result[27:0] = c[27:0];
-          end
-          4'b1011: begin // cmn
-            r[0] = a + b + 1;
-            r[1] = $signed(a) + $signed(b) + 1;
-            result[31] = r[0][31];
-            result[30] = !r[0];
-            result[29] = r[0][30:0] != r[0];
-            result[28] = $signed(r[0][30:0]) != r[1];
-            result[27:0] = c[27:0];
-          end
-          4'b1000: begin // tst
-            r[0] = a & b;
-            result[31] = r[0][31];
-            result[30] = !r[0];
-            result[29:0] = c[29:0];
-          end
-          4'b1001: begin // teq
-            r[0] = a ^ b;
-            result[31] = r[0][31];
-            result[30] = !r[0];
-            result[29:0] = c[29:0];
-          end
-          4'b0000: begin // and
-            result <= a & b;
-          end
-          4'b0001: begin // eor
-            result <= a ^ b;
-          end
-          4'b1100: begin // orr
-            result <= a | b;
-          end
-          4'b1110: begin // bic
-            result <= a & ~b;
-          end
-        endcase
+      4'b1111: begin // MVN
+        result <= ~b;
       end
-    end
+      4'b0100: begin // ADD
+        result <= a + b;
+      end
+      4'b0101: begin // ADC
+        result <= a + b + cpsr[29];
+      end
+      4'b0010: begin // SUB
+        result <= a - b;
+      end
+      4'b0110: begin // SBC
+        result <= a - b - cpsr[29];
+      end
+      4'b0011: begin // RSB
+        result <= b - a;
+      end
+      4'b0111: begin // RSC
+        result <= b - a - cpsr[29];
+      end
+      4'b1010: begin // CMP
+        result[31] <= ($unsigned(a) + $unsigned(~b) + $unsigned(1)) >> 31;
+        result[30] <= !(a + ~b + 1);
+        result[29] <= $unsigned((a + ~b + 1) >> 1) != (a + ~b + 1);
+        result[28] <= $signed((a + ~b + 1) >> 1) != ($signed(a) + $signed(~b) + $unsigned(1));
+        result[27:0] <= cpsr[27:0];
+      end
+      4'b1011: begin // CMN
+        result[31] <= ($unsigned(a) + $unsigned(b) + $unsigned(1)) >> 31;
+        result[30] <= !(a + ~b + 1);
+        result[29] <= $unsigned((a + b + 1) >> 1) != (a + b + 1);
+        result[28] <= $signed((a + b + 1) >> 1) != ($signed(a) + $signed(b) + $unsigned(1));
+        result[27:0] <= cpsr[27:0];
+      end
+      4'b1000: begin // TST
+        result[31] <= (a & b) >> 31;
+        result[30] <= !(a & b);
+        result[29:0] <= cpsr[29:0];
+      end
+      4'b1001: begin // TEQ
+        result[31] <= (a ^ b) >> 31;
+        result[30] <= !(a & b);
+        result[29:0] <= cpsr[29:0];
+      end
+      4'b0000: begin // AND
+        result <= a & b;
+      end
+      4'b0001: begin // EOR
+        result <= a ^ b;
+      end
+      4'b1100: begin // ORR
+        result <= a | b;
+      end
+      4'b1110: begin // BIC
+        result <= a & ~b;
+      end
+    endcase
   end
-endmodule
-
-module central_processing_unit(
-  clk);
-  input clk;
-  control_unit cu(
-    .clk(clk));
 endmodule
