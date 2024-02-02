@@ -26,6 +26,15 @@ module test_bench;
     .opcode(p.opcode),
     .result(p.result));
 
+  multiplier m(
+    .clk(clk),
+    .a(p.a),
+    .b(p.b),
+    .c(p.c),
+    .d(p.d),
+    .type(p.type),
+    .result(p.m_result));
+
   initial begin
     $monitor("%d\t%d\t%d\t%d\t%d", clk, p.opcode, p.a, p.b, p.result);
     clk = 0;

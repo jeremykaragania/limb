@@ -113,7 +113,7 @@ def enc_dpi(groups):
 
 def enc_mi(groups):
   cond = enc_cond(groups)
-  a = '0' if groups.opcode["opcode"][2] == "u" else '1'
+  a = '0' if groups.opcode["opcode"][1] == "u" else '1'
   s = '0' if 's' not in groups.opcode else '1'
   rd = enc_reg[groups.data["rd_reg"]]
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"

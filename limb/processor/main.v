@@ -44,6 +44,7 @@ endmodule
 module processor (
   clk,
   n_reset);
+
   // Clock.
   input clk;
 
@@ -69,24 +70,37 @@ module processor (
   reg [11:0] e_oprnd2;
   reg [11:0] e_oprnd2_t;
   reg [3:0] e_dest;
+  reg [3:0] e_dest_hi;
+  reg [3:0] e_dest_lo;
   reg [23:0] e_offset;
-  reg e_write_dest;
+  reg e_write_dest_do;
+  reg e_write_dest_m;
+  reg e_write_dest_ml;
   reg e_write_cpsr;
 
   // Register writeback.
   reg [3:0] dest;
-  reg write_dest;
+  reg [3:0] dest_hi;
+  reg [3:0] dest_lo;
+  reg write_dest_do;
+  reg write_dest_m;
+  reg write_dest_ml;
   reg write_cpsr;
 
   // Instruction cycle timing.
   reg [31:0] e_b_bl_cycle;
   reg [31:0] e_do_cycle;
+  reg [31:0] e_m_ma_cycle;
 
-  // Arithmetic logic unit.
+  // Arithmetic logic unit and multiplier.
   output reg [31:0] a;
   output reg [31:0] b;
+  output reg [31:0] c;
+  output reg [31:0] d;
   output reg [3:0] opcode;
   input [31:0] result;
+  reg [2:0] type;
+  input [63:0] m_result;
 
   // Internal.
   reg [31:0] r [0:30];
@@ -99,7 +113,7 @@ module processor (
 
   initial begin
     write = 0;
-    size = 1'b10;
+    size = 2'b10;
     prot = 2'b10;
     trans = 2'b11;
     r[15] = 0;
@@ -113,21 +127,48 @@ module processor (
     d_cond <= f_instr[31:28];
     addr_reg <= r[15];
     write_reg <= write;
-
     trans_reg <= trans;
 
     if (d_instr[27:25] == 3'b101) begin // Branch or branch with link.
       e_b_bl_cycle <= 1;
+      e_do_cycle <= 0;
+      e_m_ma_cycle <= 0;
       e_offset <= d_instr[23:0];
-      e_write_dest <= 0;
+      e_write_dest_do <= 0;
+      e_write_dest_m <= 0;
+      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
     end
     else if (d_instr[27:0] == `NOP) begin // No operation.
-      e_write_dest <= 0;
+      e_b_bl_cycle <= 0;
+      e_do_cycle <= 0;
+      e_m_ma_cycle <= 0;
+      e_write_dest_do <= 0;
+      e_write_dest_m <= 0;
+      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
     end
-    else if (d_instr[25] == 0 || d_instr[25] == 1) begin // Data processing instruction.
+    else if (!d_instr[25] && d_instr[7] && d_instr[4]) begin // Multiply or multiply accumulate.
+      e_b_bl_cycle <= 0;
+      e_do_cycle <= 0;
+      e_m_ma_cycle <= 1;
+      e_dest <= d_instr[19:16];
+      e_dest_hi <= d_instr[19:16];
+      e_dest_lo <= d_instr[15:12];
+      e_write_dest_do <= 0;
+      e_write_dest_m <= !d_instr[23];
+      e_write_dest_ml <= d_instr[23];
+      e_write_cpsr <= 0;
+      a <= r[d_instr[3:0]];
+      b <= r[d_instr[11:8]];
+      c <= r[d_instr[23]] ? r[d_instr[19:16]] : r[d_instr[15:12]];
+      d <= r[d_instr[15:12]];
+      type <= d_instr[23:21];
+    end
+    else if (d_instr[27:26] == 2'b00) begin // Data processing instruction.
+      e_b_bl_cycle <= 0;
       e_do_cycle <= 1;
+      e_m_ma_cycle <= 0;
       e_oprnd2_t <= d_instr[25];
       e_oprnd2 <= d_instr[11:0];
       e_dest <= d_instr[15:12];
@@ -135,16 +176,22 @@ module processor (
       a <= r[d_instr[19:16]];
       b <= d_instr[25] ? d_instr[11:0] : r[d_instr[11:0]];
       if (d_instr[24:21] == 4'b1010 || d_instr[24:21] == 4'b1011 || d_instr[24:21] == 4'b1000 || d_instr[24:21] == 4'b1001) begin
-        e_write_dest <= 0;
+        e_write_dest_do <= 1;
+        e_write_dest_m <= 0;
+        e_write_dest_ml <= 0;
         e_write_cpsr <= 1;
       end
       else begin
-        e_write_dest <= 1;
+        e_write_dest_do <= 1;
+        e_write_dest_m <= 0;
+        e_write_dest_ml <= 0;
         e_write_cpsr <= 0;
       end
     end
     else begin
-      e_write_dest <= 0;
+      e_write_dest_do <= 0;
+      e_write_dest_m <= 0;
+      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
       e_exec <= 0;
     end
@@ -226,13 +273,14 @@ module processor (
     endcase
 
     if (e_exec) begin
-      write_dest <= e_write_dest;
+      write_dest_do <= e_write_dest_do;
+      write_dest_m <= e_write_dest_m;
+      write_dest_ml <= e_write_dest_ml;
       write_cpsr <= e_write_cpsr;
       if (e_b_bl_cycle) begin // Branch or branch with link.
         f_instr <= {`AL, `NOP};
         d_instr <= {`AL, `NOP};
         e_instr <= {`AL, `NOP};
-        write_dest <= 0;
         case (e_b_bl_cycle)
           1: begin
             trans <= 2'b10;
@@ -256,6 +304,13 @@ module processor (
         r[15] <= r[15] + 1;
         dest <= e_dest;
       end
+      else if (e_m_ma_cycle) begin // Multiply or multiply accumulate.
+        trans <= 2'b11;
+        r[15] <= r[15] + 1;
+        dest <= e_dest;
+        dest_lo <= e_dest_lo;
+        dest_hi <= e_dest_hi;
+      end
       else begin // No operation.
         trans <= 2'b11;
         r[15] <= r[15] + 1;
@@ -267,8 +322,15 @@ module processor (
       write <= 0;
     end
 
-    if (write_dest) begin
+    if (write_dest_do) begin
       r[dest] <= result;
+    end
+    else if (write_dest_m) begin
+      r[dest] <= m_result;
+    end
+    else if (write_dest_ml) begin
+      r[dest_hi] <= m_result[63:32];
+      r[dest_lo] <= m_result[31:0];
     end
     else if (write_cpsr) begin
       cpsr <= result;
@@ -293,7 +355,7 @@ module arithmetic_logic_unit(
 
   always @ (posedge clk) begin
     case (opcode)
-      4'b1101: begin // MOv
+      4'b1101: begin // MOV
         result <= b;
       end
       4'b1111: begin // MVN
@@ -352,6 +414,47 @@ module arithmetic_logic_unit(
       end
       4'b1110: begin // BIC
         result <= a & ~b;
+      end
+    endcase
+  end
+endmodule
+
+module multiplier(
+  clk,
+  a,
+  b,
+  c,
+  d,
+  type,
+  result);
+
+  input clk;
+  input [31:0] a;
+  input [31:0] b;
+  input [31:0] c;
+  input [31:0] d;
+  input [2:0] type;
+  output reg [63:0] result;
+
+  always @ (posedge clk) begin
+    case (type)
+      3'b000: begin // MUL
+        result <= $signed(a) * $signed(b);
+      end
+      3'b001: begin // MLA
+        result <= $signed(a) * $signed(b) + $signed(c);
+      end
+      3'b100: begin // SMULL
+        result <= $unsigned(a) * $unsigned(b);
+      end
+      3'b101: begin // SMLAL
+        result <= $unsigned(a) * $unsigned(b) + $signed({c, d});
+      end
+      3'b110: begin // UMULL
+        result <= $unsigned(a) * $unsigned(b);
+      end
+      3'b111: begin // UMLAL
+        result <= $unsigned(a) * $unsigned(b) + $unsigned({c, d});
       end
     endcase
   end
