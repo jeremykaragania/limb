@@ -284,7 +284,7 @@ module processor (
         case (e_b_bl_cycle)
           1: begin
             trans <= 2'b10;
-            r[15] <= e_offset;
+            r[15] <= (r[15] - 5) + e_offset;
             e_b_bl_cycle <= e_b_bl_cycle + 1;
           end
           2: begin
