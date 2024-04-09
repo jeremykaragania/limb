@@ -1,4 +1,4 @@
-`include "main.v"
+`include "processor.v"
 
 module test_bench;
   reg clk;
