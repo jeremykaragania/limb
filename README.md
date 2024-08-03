@@ -10,7 +10,7 @@ git clone https://github.com/jeremykaragania/limb.git
 ## Usage
 Assemble source code to processor memory.
 ```bash
-python3 assembler/assembler.py -o memory infile
+python3 assembler/assembler.py -format=t -o memory infile
 ```
 Compile test bench with processor memory.
 ```bash
