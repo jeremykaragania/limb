@@ -111,6 +111,24 @@ module processor (
   reg [1:0] prot_reg;
   reg [1:0] trans_reg;
 
+  // Components.
+  arithmetic_logic_unit alu (
+    .clk(clk),
+    .a(a),
+    .b(b),
+    .cpsr(cpsr),
+    .opcode(opcode),
+    .result(result));
+
+  multiplier m(
+    .clk(clk),
+    .a(a),
+    .b(b),
+    .c(c),
+    .d(d),
+    .type(type),
+    .result(m_result));
+
   initial begin
     write = 0;
     size = 2'b10;
