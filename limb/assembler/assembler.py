@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import elf
 import re
 import sys
 from collections import namedtuple
@@ -326,20 +325,15 @@ def main():
   args = sys.argv[1:]
   filenames = []
   messages = []
-  options = {
-    "objfile": "a.out",
-    "format": 't'
-  }
+  objfile = "a.out"
   for i, j in enumerate(args):
     if j[0] == '-':
       if j[1] == 'o':
         if j[2:]:
-          options["objfile"] = j[2:]
+          objfile = j[2:]
         else:
-          options["objfile"] = args[i+1]
+          objfile = args[i+1]
           del args[i+1]
-      elif j[1:8] == "format=" and j[8:] in ('t', 'b'):
-        options["format"] = j[8:]
       else:
         messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
     else:
@@ -352,13 +346,10 @@ def main():
     print('\n'.join(message_strs))
     sys.exit(1)
   else:
-    if options["format"] == 't':
-      out = '\n'.join(obj)
-      open(options["objfile"], "w").write(f"`define filename \".{options['objfile']}\"")
-      options["objfile"] = f".{options['objfile']}"
-    else:
-      out = elf.to_bytes(elf.file(obj))
-    open(options["objfile"], f"w{options['format']}").write(out)
+    out = '\n'.join(obj)
+    open(objfile, "w").write(f"`define filename \".{objfile}\"")
+    objfile = f".{objfile}"
+    open(objfile, 'w').write(out)
     sys.exit(0)
 
 if __name__ == "__main__":
