@@ -44,6 +44,7 @@ endmodule
 module instruction_fetch_unit (
   clk,
   instr_i,
+  instr_o
   );
 
   input clk;
@@ -51,7 +52,13 @@ module instruction_fetch_unit (
 
   output [31:0] instr_o;
 
-  assign instr_o = instr_i;
+  reg [31:0] instr_r;
+
+  always @ (posedge clk) begin
+    instr_r <= instr_i;
+  end
+
+  assign instr_o = instr_r;
 endmodule
 
 module processor (
