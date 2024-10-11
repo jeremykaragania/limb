@@ -41,6 +41,19 @@ module memory_controller (
   end
 endmodule
 
+module instruction_fetch_unit (
+  clk,
+  instr_i,
+  );
+
+  input clk;
+  input [31:0] instr_i;
+
+  output [31:0] instr_o;
+
+  assign instr_o = instr_i;
+endmodule
+
 module processor (
   clk,
   n_reset);
@@ -112,6 +125,11 @@ module processor (
   reg [1:0] trans_reg;
 
   // Components.
+  instruction_fetch_unit ifu (
+    .clk(clk),
+    .instr_i(rdata)
+  );
+
   arithmetic_logic_unit alu (
     .clk(clk),
     .a(a),
@@ -139,7 +157,7 @@ module processor (
   end
 
   always @ (posedge clk) begin
-    f_instr <= rdata;
+    f_instr <= ifu.instr_o;
     d_instr <= f_instr;
     e_instr <= d_instr;
     d_cond <= f_instr[31:28];
