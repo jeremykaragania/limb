@@ -33,14 +33,9 @@ module memory_controller (
 endmodule
 
 module instruction_fetch_unit (
-  clk,
-  instr_i,
-  instr_o);
-
-  input clk;
-  input [31:0] instr_i;
-
-  output [31:0] instr_o;
+  input clk,
+  input [31:0] instr_i,
+  output [31:0] instr_o);
 
   reg [31:0] instr_r;
 
