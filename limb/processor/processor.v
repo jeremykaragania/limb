@@ -2,25 +2,16 @@
 `define NOP 28'b0011001000001111000000000000
 
 module memory_controller (
-  clk,
-  addr,
-  wdata,
-  rdata,
-  abort,
-  write,
-  size,
-  prot,
-  trans);
+  input clk,
+  input [31:0] addr,
+  input [31:0] wdata,
+  output reg [31:0] rdata,
+  output reg abort,
+  input write,
+  input size,
+  input [1:0] prot,
+  input[1:0] trans);
 
-  input clk;
-  input [31:0] addr;
-  input [31:0] wdata;
-  output reg [31:0] rdata;
-  output reg abort;
-  input write;
-  input size;
-  input [1:0] prot;
-  input [1:0] trans;
   reg [31:0] memory [0:8191];
 
   initial begin
@@ -44,8 +35,7 @@ endmodule
 module instruction_fetch_unit (
   clk,
   instr_i,
-  instr_o
-  );
+  instr_o);
 
   input clk;
   input [31:0] instr_i;
@@ -62,14 +52,8 @@ module instruction_fetch_unit (
 endmodule
 
 module processor (
-  clk,
-  n_reset);
-
-  // Clock.
-  input clk;
-
-  // Interrupts.
-  input n_reset;
+  input clk,
+  input n_reset);
 
   // Memory interface.
   output [31:0] addr;
@@ -134,8 +118,7 @@ module processor (
   // Components.
   instruction_fetch_unit ifu (
     .clk(clk),
-    .instr_i(rdata)
-  );
+    .instr_i(rdata));
 
   arithmetic_logic_unit alu (
     .clk(clk),
@@ -381,20 +364,13 @@ module processor (
   end
 endmodule
 
-module arithmetic_logic_unit(
-  clk,
-  a,
-  b,
-  cpsr,
-  opcode,
-  result);
-
-  input clk;
-  input [31:0] a;
-  input [31:0] b;
-  input [31:0] cpsr;
-  input [0:3] opcode;
-  output reg [31:0] result;
+module arithmetic_logic_unit (
+  input clk,
+  input [31:0] a,
+  input [31:0] b,
+  input [31:0] cpsr,
+  input [0:3] opcode,
+  output reg [31:0] result);
 
   always @ (posedge clk) begin
     case (opcode)
@@ -463,21 +439,13 @@ module arithmetic_logic_unit(
 endmodule
 
 module multiplier(
-  clk,
-  a,
-  b,
-  c,
-  d,
-  type,
-  result);
-
-  input clk;
-  input [31:0] a;
-  input [31:0] b;
-  input [31:0] c;
-  input [31:0] d;
-  input [2:0] type;
-  output reg [63:0] result;
+  input clk,
+  input [31:0] a,
+  input [31:0] b,
+  input [31:0] c,
+  input [31:0] d,
+  input [2:0] type,
+  output reg [63:0] result);
 
   always @ (posedge clk) begin
     case (type)
