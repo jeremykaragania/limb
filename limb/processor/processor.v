@@ -32,6 +32,31 @@ module memory_controller (
   end
 endmodule
 
+module register_file (
+  input clk,
+  input write,
+  input [5:0] reg_i_i,
+  input [31:0] reg_i,
+  output reg [31:0] reg_o);
+
+  reg [31:0] r [0:30];
+
+  initial begin
+    for (integer i = 0; i < 31; ++i) begin
+      r[i] <= i;
+    end
+  end
+
+  always @ (*) begin
+    if (write) begin
+      r[reg_i_i] = reg_i;
+    end
+    else begin
+      reg_o = r[reg_i_i];
+    end
+  end
+endmodule
+
 module instruction_fetch_unit (
   input clk,
   input [31:0] instr_i,
