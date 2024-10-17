@@ -35,27 +35,35 @@ endmodule
 module register_file (
   input clk,
   input write,
-  input [5:0] reg_i_i,
-  input [31:0] reg_i,
-  output reg [31:0] reg_o);
+  // Register write.
+  input [5:0] rw_i_i,
+  input [31:0] rw_i,
+
+  // Register read.
+  input [5:0] rr1_i_i,
+  input [5:0] rr2_i_i,
+  output reg [31:0] rr1_o,
+  output reg [31:0] rr2_o);
 
   reg [31:0] r [0:30];
 
   initial begin
     for (integer i = 0; i < 31; ++i) begin
-      r[i] <= i;
+      r[i] <= 1'b0;
     end
   end
 
   always @ (*) begin
     if (write) begin
-      r[reg_i_i] = reg_i;
+      r[rw_i_i] = rw_i;
     end
     else begin
-      reg_o = r[reg_i_i];
+      rr1_o = r[rr1_i_i];
+      rr2_o = r[rr2_i_i];
     end
   end
 endmodule
+
 
 module instruction_fetch_unit (
   input clk,
