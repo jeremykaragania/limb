@@ -65,19 +65,20 @@ module register_file (
 endmodule
 
 
-module instruction_fetch_unit (
+module instruction_fetch (
   input clk,
   input [31:0] instr_i,
-  output [31:0] instr_o);
+  output reg [31:0] instr_o);
 
-  reg [31:0] instr_r;
-
-  always @ (posedge clk) begin
-    instr_r <= instr_i;
+  initial begin
+    instr_o = 32'b0;
   end
 
-  assign instr_o = instr_r;
+  always @ (posedge clk) begin
+    instr_o <= instr_i;
+  end
 endmodule
+
 
 module processor (
   input clk,
@@ -144,7 +145,7 @@ module processor (
   reg [1:0] trans_reg;
 
   // Components.
-  instruction_fetch_unit ifu (
+  instruction_fetch if_m (
     .clk(clk),
     .instr_i(rdata));
 
@@ -175,7 +176,7 @@ module processor (
   end
 
   always @ (posedge clk) begin
-    f_instr <= ifu.instr_o;
+    f_instr <= if_m.instr_o;
     d_instr <= f_instr;
     e_instr <= d_instr;
     d_cond <= f_instr[31:28];
