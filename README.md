@@ -1,5 +1,5 @@
 # Limb
-An ARMv7-A assembler and scalar processor.
+An ARMv7-A scalar processor.
 
 ## Installation
 Clone the repository.
