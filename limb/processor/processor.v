@@ -34,7 +34,6 @@ endmodule
 
 module register_file (
   input clk,
-  input write,
   // Register write.
   input [5:0] rw_i_i,
   input [31:0] rw_i,
@@ -54,13 +53,9 @@ module register_file (
   end
 
   always @ (*) begin
-    if (write) begin
-      r[rw_i_i] = rw_i;
-    end
-    else begin
-      rr1_o = r[rr1_i_i];
-      rr2_o = r[rr2_i_i];
-    end
+    r[rw_i_i] = rw_i;
+    rr1_o = r[rr1_i_i];
+    rr2_o = r[rr2_i_i];
   end
 endmodule
 
