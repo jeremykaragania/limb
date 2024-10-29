@@ -104,21 +104,15 @@ module processor (
   reg [11:0] e_oprnd2;
   reg [11:0] e_oprnd2_t;
   reg [3:0] e_dest;
-  reg [3:0] e_dest_hi;
-  reg [3:0] e_dest_lo;
   reg [23:0] e_offset;
   reg e_write_dest_do;
   reg e_write_dest_m;
-  reg e_write_dest_ml;
   reg e_write_cpsr;
 
   // Register writeback.
   reg [3:0] dest;
-  reg [3:0] dest_hi;
-  reg [3:0] dest_lo;
   reg write_dest_do;
   reg write_dest_m;
-  reg write_dest_ml;
   reg write_cpsr;
 
   // Instruction cycle timing.
@@ -192,7 +186,6 @@ module processor (
       e_offset <= d_instr[23:0];
       e_write_dest_do <= 0;
       e_write_dest_m <= 0;
-      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
     end
     else if (d_instr[27:0] == `NOP) begin // No operation.
@@ -201,7 +194,6 @@ module processor (
       e_m_ma_cycle <= 0;
       e_write_dest_do <= 0;
       e_write_dest_m <= 0;
-      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
     end
     else if (!d_instr[25] && d_instr[7] && d_instr[4]) begin // Multiply or multiply accumulate.
@@ -209,11 +201,8 @@ module processor (
       e_do_cycle <= 0;
       e_m_ma_cycle <= 1;
       e_dest <= d_instr[19:16];
-      e_dest_hi <= d_instr[19:16];
-      e_dest_lo <= d_instr[15:12];
       e_write_dest_do <= 0;
       e_write_dest_m <= !d_instr[23];
-      e_write_dest_ml <= d_instr[23];
       e_write_cpsr <= 0;
       a <= r[d_instr[3:0]];
       b <= r[d_instr[11:8]];
@@ -234,20 +223,17 @@ module processor (
       if (d_instr[24:21] == 4'b1010 || d_instr[24:21] == 4'b1011 || d_instr[24:21] == 4'b1000 || d_instr[24:21] == 4'b1001) begin
         e_write_dest_do <= 1;
         e_write_dest_m <= 0;
-        e_write_dest_ml <= 0;
         e_write_cpsr <= 1;
       end
       else begin
         e_write_dest_do <= 1;
         e_write_dest_m <= 0;
-        e_write_dest_ml <= 0;
         e_write_cpsr <= 0;
       end
     end
     else begin
       e_write_dest_do <= 0;
       e_write_dest_m <= 0;
-      e_write_dest_ml <= 0;
       e_write_cpsr <= 0;
       e_exec <= 0;
     end
@@ -331,7 +317,6 @@ module processor (
     if (e_exec) begin
       write_dest_do <= e_write_dest_do;
       write_dest_m <= e_write_dest_m;
-      write_dest_ml <= e_write_dest_ml;
       write_cpsr <= e_write_cpsr;
       if (e_b_bl_cycle) begin // Branch or branch with link.
         f_instr <= {`AL, `NOP};
@@ -364,8 +349,6 @@ module processor (
         trans <= 2'b11;
         r[15] <= r[15] + 1;
         dest <= e_dest;
-        dest_lo <= e_dest_lo;
-        dest_hi <= e_dest_hi;
       end
       else begin // No operation.
         trans <= 2'b11;
@@ -383,10 +366,6 @@ module processor (
     end
     else if (write_dest_m) begin
       r[dest] <= m_result;
-    end
-    else if (write_dest_ml) begin
-      r[dest_hi] <= m_result[63:32];
-      r[dest_lo] <= m_result[31:0];
     end
     else if (write_cpsr) begin
       cpsr <= result;
