@@ -116,7 +116,6 @@ module processor (
   reg write_cpsr;
 
   // Instruction cycle timing.
-  reg [31:0] e_b_bl_cycle;
   reg [31:0] e_do_cycle;
   reg [31:0] e_m_ma_cycle;
 
@@ -179,17 +178,7 @@ module processor (
     write_reg <= write;
     trans_reg <= trans;
 
-    if (d_instr[27:25] == 3'b101) begin // Branch or branch with link.
-      e_b_bl_cycle <= 1;
-      e_do_cycle <= 0;
-      e_m_ma_cycle <= 0;
-      e_offset <= d_instr[23:0];
-      e_write_dest_do <= 0;
-      e_write_dest_m <= 0;
-      e_write_cpsr <= 0;
-    end
-    else if (d_instr[27:0] == `NOP) begin // No operation.
-      e_b_bl_cycle <= 0;
+    if (d_instr[27:0] == `NOP) begin // No operation.
       e_do_cycle <= 0;
       e_m_ma_cycle <= 0;
       e_write_dest_do <= 0;
@@ -197,7 +186,6 @@ module processor (
       e_write_cpsr <= 0;
     end
     else if (!d_instr[25] && d_instr[7] && d_instr[4]) begin // Multiply or multiply accumulate.
-      e_b_bl_cycle <= 0;
       e_do_cycle <= 0;
       e_m_ma_cycle <= 1;
       e_dest <= d_instr[19:16];
@@ -211,7 +199,6 @@ module processor (
       type <= d_instr[23:21];
     end
     else if (d_instr[27:26] == 2'b00) begin // Data processing instruction.
-      e_b_bl_cycle <= 0;
       e_do_cycle <= 1;
       e_m_ma_cycle <= 0;
       e_oprnd2_t <= d_instr[25];
@@ -318,29 +305,7 @@ module processor (
       write_dest_do <= e_write_dest_do;
       write_dest_m <= e_write_dest_m;
       write_cpsr <= e_write_cpsr;
-      if (e_b_bl_cycle) begin // Branch or branch with link.
-        f_instr <= {`AL, `NOP};
-        d_instr <= {`AL, `NOP};
-        e_instr <= {`AL, `NOP};
-        case (e_b_bl_cycle)
-          1: begin
-            trans <= 2'b10;
-            r[15] <= (r[15] - 5) + e_offset;
-            e_b_bl_cycle <= e_b_bl_cycle + 1;
-          end
-          2: begin
-            trans <= 2'b11;
-            r[15] <= r[15] + 1;
-            e_b_bl_cycle <= e_b_bl_cycle + 1;
-          end
-          3: begin
-            trans <= 2'b11;
-            r[15] <= r[15] + 1;
-            e_b_bl_cycle <= 0;
-          end
-        endcase
-      end
-      else if (e_do_cycle) begin // Data operation.
+      if (e_do_cycle) begin // Data operation.
         trans <= 2'b11;
         r[15] <= r[15] + 1;
         dest <= e_dest;
