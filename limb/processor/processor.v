@@ -42,8 +42,12 @@ module register_file (
   // Register read.
   input [5:0] rr1_i_i,
   input [5:0] rr2_i_i,
+  input [5:0] rr3_i_i,
+  input [5:0] rr4_i_i,
   output reg [31:0] rr1_o,
   output reg [31:0] rr2_o,
+  output reg [31:0] rr3_o,
+  output reg [31:0] rr4_o,
   output reg [31:0] cpsr_o);
 
   reg [31:0] r [0:30];
@@ -60,6 +64,8 @@ module register_file (
     r[rw_i_i] = rw_i;
     rr1_o = r[rr1_i_i];
     rr2_o = r[rr2_i_i];
+    rr3_o = r[rr3_i_i];
+    rr4_o = r[rr4_i_i];
     cpsr = cpsr_i;
     cpsr_o = cpsr;
   end
