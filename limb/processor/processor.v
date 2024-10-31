@@ -71,7 +71,6 @@ module register_file (
   end
 endmodule
 
-
 module instruction_fetch (
   input clk,
   input write_pc_i,
@@ -80,19 +79,23 @@ module instruction_fetch (
   output reg [31:0] pc_o,
   output reg [31:0] instr_o);
 
+  reg [31:0] pc_r;
+
   initial begin
+    pc_r = 32'b0;
     pc_o = 32'b0;
     instr_o = 32'b0;
   end
 
   always @ (posedge clk) begin
     if (write_pc_i) begin
-      pc_o <= pc_i;
+      pc_r <= pc_i;
     end
     else begin
-      pc_o <= pc_o + 32'd1;
+      pc_r <= pc_r + 32'd1;
     end
 
+    pc_o <= pc_r;
     instr_o <= instr_i;
   end
 endmodule
