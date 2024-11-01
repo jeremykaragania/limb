@@ -20,7 +20,7 @@ module test_bench;
 
   initial begin
     $monitor("%d\t%d\t%d\t%d\t%d", clk, p.opcode, p.a, p.b, p.result);
-    clk = 0;
+    clk = 1'b0;
     #64 $finish;
   end
 
