@@ -277,7 +277,16 @@ endmodule
 module processor (
   input clk,
   input n_reset,
-  output [31:0] addr);
+
+  // Memory interface.
+  output [31:0] addr,
+  output [31:0] wdata,
+  input [31:0] rdata,
+  input abort,
+  output reg write,
+  output reg size,
+  output reg [1:0] prot,
+  output reg [1:0] trans);
 
   // Register file.
   reg [5:0] rw_i_i;
@@ -307,15 +316,6 @@ module processor (
   wire e_write_dest_m_w;
   wire e_write_cpsr_w;
 
-  // Memory interface.
-  output [31:0] wdata;
-  input [31:0] rdata;
-  input abort;
-  output reg write;
-  output reg size;
-  output reg [1:0] prot;
-  output reg [1:0] trans;
-
   // Register writeback.
   reg [3:0] dest;
   reg write_dest_do;
@@ -335,13 +335,6 @@ module processor (
   wire [31:0] result_w;
   wire [2:0] type_w;
   wire [63:0] m_result_w;
-
-  // Internal.
-  reg [31:0] addr_reg;
-  reg write_reg;
-  reg size_reg;
-  reg [1:0] prot_reg;
-  reg [1:0] trans_reg;
 
   register_file rf_m (
     .clk(clk),
@@ -431,16 +424,9 @@ module processor (
     write_dest_do = 1'b0;
     write_dest_m = 1'b0;
     write_cpsr = 1'b0;
-    addr_reg = 32'b0;
-    write_reg = 1'b0;
-    size_reg = 1'b0;
-    prot_reg = 2'b0;
-    trans_reg = 2'b0;
   end
 
   always @ (posedge clk) begin
-    write_reg <= write;
-    trans_reg <= trans;
 
     if (e_exec_w) begin
       write_dest_do <= e_write_dest_do_w;
