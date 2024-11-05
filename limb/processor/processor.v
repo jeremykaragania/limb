@@ -362,6 +362,43 @@ module instruction_execute (
   end
 endmodule
 
+module write_back (
+  input clk,
+
+  input [3:0] dest_i,
+
+  input write_dest_do_i,
+  input write_dest_m_i,
+  input write_cpsr_i,
+
+  input [31:0] result_i,
+  input [63:0] m_result_i,
+
+  output reg [5:0] rw_i_o,
+  output reg [31:0] rw_o,
+  output reg [31:0] cpsr_o);
+
+  initial begin
+    rw_i_o = 6'b0;
+    rw_o = 32'b0;
+    cpsr_o = 32'b0;
+  end
+
+  always @ (posedge clk) begin
+    if (write_dest_do_i) begin
+      rw_i_o <= dest_i;
+      rw_o <= result_i;
+    end
+    else if (write_dest_m_i) begin
+      rw_i_o <= dest_i;
+      rw_o <= m_result_i;
+    end
+    else if (write_cpsr_i) begin
+      cpsr_o <= result_i;
+    end
+  end
+endmodule
+
 module processor (
   input clk,
   input n_reset,
@@ -377,9 +414,9 @@ module processor (
   output [1:0] trans);
 
   // Register file.
-  reg [5:0] rw_i_i;
-  reg [31:0] rw_i;
-  reg [31:0] cpsr_i;
+  wire [5:0] rw_i_i_w;
+  wire [31:0] rw_i_w;
+  wire [31:0] cpsr_i_w;
   wire [5:0] rr1_i_i_w;
   wire [5:0] rr2_i_i_w;
   wire [5:0] rr3_i_i_w;
@@ -426,9 +463,9 @@ module processor (
 
   register_file rf_m (
     .clk(clk),
-    .rw_i_i(rw_i_i),
-    .rw_i(rw_i),
-    .cpsr_i(cpsr_i),
+    .rw_i_i(rw_i_i_w),
+    .rw_i(rw_i_w),
+    .cpsr_i(cpsr_i_w),
 
     .rr1_i_i(rr1_i_i_w),
     .rr2_i_i(rr2_i_i_w),
@@ -504,7 +541,7 @@ module processor (
     .opcode_i(opcode_w),
     .type_i(type_w),
 
-    .cpsr_i(cpsr_i),
+    .cpsr_i(cpsr_i_w),
 
     .dest_o(dest),
 
@@ -518,25 +555,21 @@ module processor (
     .result_o(result_w),
     .m_result_o(m_result_w));
 
-  initial begin
-    rw_i_i = 6'b0;
-    rw_i = 32'b0;
-    cpsr_i = 32'b0;
-  end
+  write_back wb_m (
+  .clk(clk),
 
-  always @ (posedge clk) begin
-    if (write_dest_do) begin
-      rw_i_i <= dest;
-      rw_i <= result_w;
-    end
-    else if (write_dest_m) begin
-      rw_i_i <= dest;
-      rw_i <= m_result_w;
-    end
-    else if (write_cpsr) begin
-      cpsr_i <= result_w;
-    end
-  end
+  .dest_i(dest),
+
+  .write_dest_do_i(write_dest_do),
+  .write_dest_m_i(write_dest_m),
+  .write_cpsr_i(write_cpsr),
+
+  .result_i(result_w),
+  .m_result_i(m_result_w),
+
+  .rw_i_o(rw_i_i_w),
+  .rw_o(rw_i_w),
+  .cpsr_o(cpsr_i_w));
 endmodule
 
 module arithmetic_logic_unit (
