@@ -274,6 +274,94 @@ module instruction_decode (
   end
 endmodule
 
+module instruction_execute (
+  input clk,
+
+  input exec_i,
+
+  input [3:0] dest_i,
+
+  input write_dest_do_i,
+  input write_dest_m_i,
+  input write_cpsr_i,
+
+  input [31:0] do_cycle_i,
+  input [31:0] m_ma_cycle_i,
+
+  input [31:0] a_i,
+  input [31:0] b_i,
+  input [31:0] c_i,
+  input [31:0] d_i,
+  input [3:0] opcode_i,
+  input [2:0] type_i,
+
+  input [31:0] cpsr_i,
+
+  output reg [3:0] dest_o,
+
+  output reg write_dest_do_o,
+  output reg write_dest_m_o,
+  output reg write_cpsr_o,
+
+  output reg write_o,
+  output reg [1:0] trans_o,
+
+  output [31:0] result_o,
+  output [63:0] m_result_o);
+
+  arithmetic_logic_unit alu (
+    .clk(clk),
+    .a(a_i),
+    .b(b_i),
+    .cpsr(cpsr_i),
+    .opcode(opcode_i),
+    .result(result_o));
+
+  multiplier m(
+    .clk(clk),
+    .a(a_i),
+    .b(b_i),
+    .c(c_i),
+    .d(d_i),
+    .type(type_i),
+    .result(m_result_o));
+
+  initial begin
+    dest_o = 4'b0;
+
+    write_dest_do_o = 1'b0;
+    write_dest_m_o = 1'b0;
+    write_cpsr_o = 1'b0;
+
+    write_o = 1'b0;
+    trans_o = 1'b0;
+  end
+
+  always @ (posedge clk) begin
+    if (exec_i) begin
+      write_dest_do_o <= write_dest_do_i;
+      write_dest_m_o <= write_dest_m_i;
+      write_cpsr_o <= write_cpsr_i;
+
+      if (do_cycle_i) begin // Data operation.
+        trans_o <= 2'b11;
+        dest_o <= dest_i;
+      end
+      else if (m_ma_cycle_i) begin // Multiply or multiply accumulate.
+        trans_o <= 2'b11;
+        dest_o <= dest_i;
+      end
+      else begin // No operation.
+        trans_o <= 2'b11;
+      end
+    end
+    else begin
+      trans_o <= 2'b11;
+      write_o <= 1'b0;
+    end
+  end
+endmodule
+
 module processor (
   input clk,
   input n_reset,
@@ -283,10 +371,10 @@ module processor (
   output [31:0] wdata,
   input [31:0] rdata,
   input abort,
-  output reg write,
-  output reg size,
-  output reg [1:0] prot,
-  output reg [1:0] trans);
+  output write,
+  output size,
+  output [1:0] prot,
+  output [1:0] trans);
 
   // Register file.
   reg [5:0] rw_i_i;
@@ -317,10 +405,10 @@ module processor (
   wire e_write_cpsr_w;
 
   // Register writeback.
-  reg [3:0] dest;
-  reg write_dest_do;
-  reg write_dest_m;
-  reg write_cpsr;
+  wire [3:0] dest;
+  wire write_dest_do;
+  wire write_dest_m;
+  wire write_cpsr;
 
   // Instruction cycle timing.
   wire [31:0] e_do_cycle_w;
@@ -395,60 +483,48 @@ module processor (
     .opcode(opcode_w),
     .type(type_w));
 
-  arithmetic_logic_unit alu (
+  instruction_execute ie_m (
     .clk(clk),
-    .a(a_w),
-    .b(b_w),
-    .cpsr(cpsr_i),
-    .opcode(opcode_w),
-    .result(result_w));
 
-  multiplier m(
-    .clk(clk),
-    .a(a_w),
-    .b(b_w),
-    .c(c_w),
-    .d(d_w),
-    .type(type_w),
-    .result(m_result_w));
+    .exec_i(e_exec_w),
+
+    .dest_i(e_dest_w),
+
+    .write_dest_do_i(e_write_dest_do_w),
+    .write_dest_m_i(e_write_dest_m_w),
+    .write_cpsr_i(e_write_cpsr_w),
+
+    .do_cycle_i(e_do_cycle_w),
+    .m_ma_cycle_i(e_m_ma_cycle_w),
+
+    .a_i(a_w),
+    .b_i(b_w),
+    .c_i(c_w),
+    .d_i(d_w),
+    .opcode_i(opcode_w),
+    .type_i(type_w),
+
+    .cpsr_i(cpsr_i),
+
+    .dest_o(dest),
+
+    .write_dest_do_o(write_dest_do),
+    .write_dest_m_o(write_dest_m),
+    .write_cpsr_o(write_cpsr),
+
+    .write_o(write),
+    .trans_o(trans),
+
+    .result_o(result_w),
+    .m_result_o(m_result_w));
 
   initial begin
     rw_i_i = 6'b0;
     rw_i = 32'b0;
     cpsr_i = 32'b0;
-    write = 1'b0;
-    size = 2'b10;
-    prot = 2'b10;
-    trans = 2'b11;
-    dest = 4'b0;
-    write_dest_do = 1'b0;
-    write_dest_m = 1'b0;
-    write_cpsr = 1'b0;
   end
 
   always @ (posedge clk) begin
-
-    if (e_exec_w) begin
-      write_dest_do <= e_write_dest_do_w;
-      write_dest_m <= e_write_dest_m_w;
-      write_cpsr <= e_write_cpsr_w;
-      if (e_do_cycle_w) begin // Data operation.
-        trans <= 2'b11;
-        dest <= e_dest_w;
-      end
-      else if (e_m_ma_cycle_w) begin // Multiply or multiply accumulate.
-        trans <= 2'b11;
-        dest <= e_dest_w;
-      end
-      else begin // No operation.
-        trans <= 2'b11;
-      end
-    end
-    else begin
-      trans <= 2'b11;
-      write <= 1'b0;
-    end
-
     if (write_dest_do) begin
       rw_i_i <= dest;
       rw_i <= result_w;
