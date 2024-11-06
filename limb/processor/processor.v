@@ -139,6 +139,7 @@ module instruction_decode (
   output reg [3:0] opcode,
   output reg [2:0] type);
 
+  reg e_oprnd2_t;
   reg [31:0] cpsr;
 
   initial begin
@@ -166,6 +167,7 @@ module instruction_decode (
     opcode = 4'b0;
     type = 3'b0;
 
+    e_oprnd2_t = 1'b0;
     cpsr = 32'b0;
   end
 
@@ -196,6 +198,7 @@ module instruction_decode (
     end
     else if (instr_i[27:26] == 2'b00) begin // Data processing instruction.
       e_do_cycle = 1'b1;
+      e_oprnd2_t = instr_i[25];
       e_oprnd2 = instr_i[11:0];
       e_dest = instr_i[15:12];
       opcode = instr_i[24:21];
