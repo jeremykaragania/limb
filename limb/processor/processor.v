@@ -110,6 +110,8 @@ module instruction_decode (
 
   input [31:0] instr_i,
 
+  input [31:0] result_i,
+
   input [31:0] rr1_i,
   input [31:0] rr2_i,
   input [31:0] rr3_i,
@@ -200,12 +202,34 @@ module instruction_decode (
       e_do_cycle = 1'b1;
       e_oprnd2_t = instr_i[25];
       e_oprnd2 = instr_i[11:0];
-      e_dest = instr_i[15:12];
       opcode = instr_i[24:21];
       rr1_i_o = instr_i[19:16];
       rr2_i_o = e_oprnd2;
-      a = rr1_i;
-      b = instr_i[25] ? instr_i[11:0] : rr2_i;
+
+      /*
+        If the first register being read hasn't been written yet, forward the
+        result from the instruction execution module.
+      */
+      if (e_dest == rr1_i_o) begin
+        a = result_i;
+      end
+      else begin
+        a = rr1_i;
+      end
+
+      /*
+        If the second register being read hasn't been written yet, forward the
+        result from the instruction execution module.
+      */
+      if (e_dest == rr2_i_o) begin
+        b = result_i;
+      end
+      else begin
+        b = instr_i[25] ? instr_i[11:0] : rr2_i;
+      end
+
+      e_dest = instr_i[15:12];
+
       if (instr_i[24:21] == 4'b1010 || instr_i[24:21] == 4'b1011 || instr_i[24:21] == 4'b1000 || instr_i[24:21] == 4'b1001) begin
         e_write_dest_do = 1'b1;
         e_write_dest_m = 1'b0;
@@ -517,7 +541,10 @@ module processor (
 
   instruction_decode id_m (
     .clk(clk),
+
     .instr_i(instr_f_w),
+
+    .result_i(result_w),
 
     .rr1_i(rr1_o_w),
     .rr2_i(rr2_o_w),
