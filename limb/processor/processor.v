@@ -86,9 +86,10 @@ module instruction_fetch (
   reg [31:0] pc_r;
 
   initial begin
-    pc_r = 32'b0;
     pc_o = 32'b0;
     instr_o = 32'b0;
+
+    pc_r = 32'b0;
   end
 
   always @ (posedge clk) begin
@@ -141,6 +142,30 @@ module instruction_decode (
   reg [31:0] cpsr;
 
   initial begin
+    rr1_i_o = 6'b0;
+    rr2_i_o = 6'b0;
+    rr3_i_o = 6'b0;
+    rr4_i_o = 6'b0;
+
+    cond_o = 4'b0;
+    e_exec = 1'b0;
+    e_oprnd2 = 12'b0;
+    e_dest = 4'b0;
+
+    e_write_dest_do = 1'b0;
+    e_write_dest_m = 1'b0;
+    e_write_cpsr = 1'b0;
+
+    e_do_cycle = 32'b0;
+    e_m_ma_cycle = 32'b0;
+
+    a = 32'b0;
+    b = 32'b0;
+    c = 32'b0;
+    d = 32'b0;
+    opcode = 4'b0;
+    type = 3'b0;
+
     cpsr = 32'b0;
   end
 
