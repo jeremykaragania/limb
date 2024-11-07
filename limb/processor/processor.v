@@ -210,7 +210,7 @@ module instruction_decode (
         If the first register being read hasn't been written yet, forward the
         result from the instruction execution module.
       */
-      if (e_dest == rr1_i_o) begin
+      if (e_exec && e_dest == rr1_i_o) begin
         a = result_i;
       end
       else begin
@@ -221,7 +221,7 @@ module instruction_decode (
         If the second register being read hasn't been written yet, forward the
         result from the instruction execution module.
       */
-      if (e_dest == rr2_i_o) begin
+      if (e_exec && e_dest == rr2_i_o) begin
         b = result_i;
       end
       else begin
