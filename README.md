@@ -10,11 +10,11 @@ git clone https://github.com/jeremykaragania/limb.git
 ## Usage
 Assemble source code to processor memory.
 ```bash
-python3 assembler/assembler.py -o memory infile
+python3 tools/assembler.py -o memory examples/arithmetic.s
 ```
 Compile test bench with processor memory.
 ```bash
-iverilog -I processor/ -o test_bench memory processor/test_bench.v
+iverilog -I limb/ -o test_bench memory limb/test_bench.v
 ```
 Execute test bench.
 ```bash
