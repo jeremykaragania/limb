@@ -347,9 +347,8 @@ def main():
     sys.exit(1)
   else:
     out = '\n'.join(obj)
-    open(objfile, "w").write(f"`define filename \".{objfile}\"")
-    objfile = f".{objfile}"
     open(objfile, 'w').write(out)
+    open(".memory", 'w').write(out)
     sys.exit(0)
 
 if __name__ == "__main__":
