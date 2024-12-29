@@ -15,7 +15,7 @@ module memory_controller (
   reg [31:0] memory [0:8191];
 
   initial begin
-    $readmemh(`filename, memory);
+    $readmemh(".memory", memory);
     rdata = 32'b0;
     abort = 32'b0;
   end
