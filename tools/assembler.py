@@ -47,16 +47,16 @@ cond_t = {
 
 def check_length(x, length):
   if (len(x) > length):
-    return [assembler_message(None, None, "Error", f"invalid constant {(hex(int(x, 2)))} after fixup")]
+    return [assembler_message(None, None, "Error", fr"invalid constant {(hex(int(x, 2)))} after fixup")]
   return []
 
 enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
 
-enc_reg = {str(i):f"{i:04b}" for i in range(14)}
+enc_reg = {str(i):fr"{i:04b}" for i in range(14)}
 
 def enc_a_mode2(groups):
   if "b12_imm" in groups.data:
-    offset = f"{int(groups.data['b12_imm']):0>12b}"
+    offset = fr"{int(groups.data['b12_imm']):0>12b}"
     return check_length(offset, 12), offset
   elif "shift" in groups.data:
     messages, shift = enc_shift(groups)
@@ -67,7 +67,7 @@ def enc_a_mode2(groups):
 
 def enc_a_mode3(groups):
   if "b8_imm" in groups.data:
-    imm = f"{int(groups.data['b8_imm']):0>8b}"
+    imm = fr"{int(groups.data['b8_imm']):0>8b}"
     return check_length(imm, 8), (imm[:4], imm[4:])
   else:
     rm = enc_reg[groups.data["rm_reg"]]
@@ -84,7 +84,7 @@ def enc_shift(groups):
   }
   shift_type = enc_shift_type[groups.data["shift"]]
   if "b5_imm" in groups.data:
-    ret = f"{int(groups.data['b5_imm']):0>5b}"
+    ret = fr"{int(groups.data['b5_imm']):0>5b}"
     messages = check_length(ret, 5)
     ret += shift_type + '0'
   else:
@@ -96,7 +96,7 @@ enc_oprnd2 = {
   "shift": lambda x: enc_shift(x),
   "rrx": lambda x: ([], "00000110" + enc_reg[x.data["rm_reg"]]),
   "reg": lambda x: ([], "00000000" + enc_reg[x.data["rm_reg"]]),
-  "imm": lambda x: (check_length(f"{int(x.data['b12_imm']):0>12b}", 12), f"{int(x.data['b12_imm']):0>12b}")
+  "imm": lambda x: (check_length(fr"{int(x.data['b12_imm']):0>12b}", 12), fr"{int(x.data['b12_imm']):0>12b}")
 }
 
 def enc_dpi(groups):
@@ -165,7 +165,7 @@ def enc_sdt(groups):
 def enc_bi(groups):
   cond = enc_cond(groups)
   l = '0' if groups.opcode["opcode"] == "b" else '1'
-  offset = f"{int(groups.data['label_imm']):0>24b}"
+  offset = fr"{int(groups.data['label_imm']):0>24b}"
   return [], cond + "101" + l + offset
 
 def enc_nop(groups):
@@ -174,51 +174,51 @@ def enc_nop(groups):
 
 suffix_re = "(?P<s>s)?"
 
-condition_re = f"(?P<cond>{'|'.join(cond_t)})?"
+condition_re = fr"(?P<cond>{'|'.join(cond_t)})?"
 
-imm_re = lambda group: f"#(?P<{group}_imm>[\d]*)"
+imm_re = lambda group: fr"#(?P<{group}_imm>[\d]*)"
 
-reg_re = lambda group: f"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
+reg_re = lambda group: fr"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)])})"
 
-sign_re = f"(?P<sign>[+|-]\s*)?"
+sign_re = fr"(?P<sign>[+|-]\s*)?"
 
 def shift_re(group, is_oprnd2):
   ret = '' if is_oprnd2 else sign_re
-  ret += f"{reg_re('rm')}\s*"
-  ret += '' if is_oprnd2 else ",\s*"
-  ret += f"(?P<shift>{group})\s+"
-  ret += f"(?:{reg_re(f'rs')}|{imm_re(f'b5')})" if is_oprnd2 else f"{imm_re('b5')}"
+  ret += fr"{reg_re('rm')}\s*"
+  ret += r'' if is_oprnd2 else r",\s*"
+  ret += fr"(?P<shift>{group})\s+"
+  ret += fr"(?:{reg_re(f'rs')}|{imm_re(f'b5')})" if is_oprnd2 else fr"{imm_re('b5')}"
   return ret
 
 oprnd2_re = (
-  f"(?P<lsl>{shift_re('lsl', True)})",
-  f"(?P<lsr>{shift_re('lsr', True)})",
-  f"(?P<asr>{shift_re('asr', True)})",
-  f"(?P<ror>{shift_re('ror', True)})",
-  f"(?P<rrx>{reg_re('rm')}\s+rrx)",
-  f"(?P<reg>{reg_re('rm')})",
-  f"(?P<imm>{imm_re('b12')})")
+  fr"(?P<lsl>{shift_re('lsl', True)})",
+  fr"(?P<lsr>{shift_re('lsr', True)})",
+  fr"(?P<asr>{shift_re('asr', True)})",
+  fr"(?P<ror>{shift_re('ror', True)})",
+  fr"(?P<rrx>{reg_re('rm')}\s+rrx)",
+  fr"(?P<reg>{reg_re('rm')})",
+  fr"(?P<imm>{imm_re('b12')})")
 
 a_mode2_re = (
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{shift_re('lsl', False)}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{shift_re('lsr', False)}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{shift_re('asr', False)}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{shift_re('ror', False)}\](?P<pre>!?)",
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\](?P<pre>!?)",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b12')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsl', False)})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsr', False)})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('asr', False)})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('ror', False)})",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx))")
+  fr"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b12')}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{shift_re('lsl', False)}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{shift_re('lsr', False)}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{shift_re('asr', False)}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{shift_re('ror', False)}\](?P<pre>!?)",
+  fr"\[{reg_re('rn')}\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx)\](?P<pre>!?)",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b12')})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsl', False)})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('lsr', False)})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('asr', False)})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{shift_re('ror', False)})",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{reg_re('rm')}\s*,\s*(?P<shift>rrx))")
 
 
 a_mode3_re = (
-  f"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b8')}\](?P<pre>!?)",
-  f"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b8')})",
+  fr"\[{reg_re('rn')}\s*,\s*{sign_re}{imm_re('b8')}\](?P<pre>!?)",
+  fr"(?P<post>\[{reg_re('rn')}\]\s*,\s*{sign_re}{imm_re('b8')})",
   a_mode2_re[1],
   a_mode2_re[8]
 )
@@ -248,12 +248,12 @@ def unfold(x):
       return ret
 
 def opcode_re(opcode, has_cond, has_s):
-  opcode = f"(?P<opcode>{'|'.join(opcode)})"
+  opcode = fr"(?P<opcode>{'|'.join(opcode)})"
   cond = condition_re if has_cond else ''
-  s = f"(?P<s>s)?" if has_s else ''
-  return f"^{opcode}{cond}{s}$"
+  s = fr"(?P<s>s)?" if has_s else ''
+  return fr"^{opcode}{cond}{s}$"
 
-data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else ['^' + "\s*,\s*".join(unfold(i)) + '$' for i in fold(res)]
+data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in fold(res)]
 
 instruction_t = (
   (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
@@ -277,10 +277,10 @@ def preprocess(messages, filenames):
     try:
       f = open(filename, 'r').read()
     except:
-      messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
+      messages.append(assembler_message(None, None, "Error", fr"can't open {filename}"))
       return []
     else:
-      f = re.sub("\/\*(?:.|\n)*\*\/", '', f)
+      f = re.sub(r"\/\*(?:.|\n)*\*\/", '', f)
       f = f.split('\n')
       files[filename] = []
       for line, i in enumerate(f):
@@ -312,13 +312,13 @@ def assemble(messages, files):
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
                 i_messages, i_enc = fn(instruction(opcode_groups, data_groups))
                 messages += [assembler_message(f, line, i.type, i.text) for i in i_messages]
-                obj.append((f"{int(i_enc, 2):<04x}"))
+                obj.append((fr"{int(i_enc, 2):<04x}"))
                 break
           if not data_match:
-            messages.append(assembler_message(f, line, "Error", f"no such data for \"{i.opcode}\": \"{i.data}\""))
+            messages.append(assembler_message(f, line, "Error", fr"no such data for \"{i.opcode}\": \"{i.data}\""))
           break
       if not opcode_match:
-        messages.append(assembler_message(f, line, "Error", f"no such instruction opcode: \"{i.opcode}\""))
+        messages.append(assembler_message(f, line, "Error", fr"no such instruction opcode: \"{i.opcode}\""))
   return obj
 
 def main():
@@ -335,12 +335,12 @@ def main():
           objfile = args[i+1]
           del args[i+1]
       else:
-        messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
+        messages.append(assembler_message(None, None, "Error", fr"unrecognized option: \"{j}\""))
     else:
       filenames.append(j)
   obj = "" if messages else assemble(messages, preprocess(messages, set(filenames)))
   if messages:
-    message_to_str = lambda message: (f"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
+    message_to_str = lambda message: (fr"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
     message_strs = [message_to_str(i) for i in messages]
     print("Assembler messages:")
     print('\n'.join(message_strs))
