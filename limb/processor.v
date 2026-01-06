@@ -14,7 +14,7 @@ module memory_controller (
   input [1:0] prot,
   input[1:0] trans);
 
-  reg [31:0] memory [0:8191];
+  reg [7:0] memory [0:8191];
 
   initial begin
     $readmemh(".memory", memory);
@@ -26,10 +26,10 @@ module memory_controller (
     if (trans == 2'b10 || trans == 2'b11) begin
       case (write)
         0: begin
-          rdata <= memory[addr];
+          rdata <= {memory[addr], memory[addr+1], memory[addr+2], memory[addr+3]};
         end
         1: begin
-          memory[addr] <= wdata;
+          {memory[addr], memory[addr+1], memory[addr+2], memory[addr+3]} <= wdata;
         end
       endcase
     end

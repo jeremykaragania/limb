@@ -346,7 +346,8 @@ def main():
     print('\n'.join(message_strs))
     sys.exit(1)
   else:
-    out = '\n'.join(obj)
+    flat = ''.join(obj)
+    out = '\n'.join([flat[i:i+2] for i in range(0, len(flat), 2)])
     open(objfile, 'w').write(out)
     open(".memory", 'w').write(out)
     sys.exit(0)

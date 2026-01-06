@@ -24,7 +24,7 @@ module instruction_fetch (
       pc_r <= pc_i;
     end
     else begin
-      pc_r <= pc_r + 32'b1;
+      pc_r <= pc_r + 32'd4;
     end
 
     pc_o <= pc_r;
