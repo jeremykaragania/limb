@@ -18,8 +18,6 @@ module memory_controller (
 
   initial begin
     $readmemh(".memory", memory);
-    rdata = 32'b0;
-    abort = 32'b0;
   end
 
   always @ (posedge clk) begin
@@ -260,10 +258,6 @@ module arithmetic_logic_unit (
   input [0:3] opcode,
   output reg [31:0] result);
 
-  initial begin
-    result = 32'b0;
-  end
-
   always @ (posedge clk) begin
     case (opcode)
       4'b1101: begin // MOV
@@ -338,10 +332,6 @@ module multiplier(
   input [31:0] d,
   input [2:0] type,
   output reg [63:0] result);
-
-  initial begin
-    result = 32'b0;
-  end
 
   always @ (posedge clk) begin
     case (type)

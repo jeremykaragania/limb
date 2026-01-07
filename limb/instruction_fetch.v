@@ -13,9 +13,6 @@ module instruction_fetch (
   reg [31:0] pc_r;
 
   initial begin
-    pc_o = 32'b0;
-    instr_o = 32'b0;
-
     pc_r = 32'b0;
   end
 

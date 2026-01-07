@@ -53,17 +53,6 @@ module instruction_execute (
     .type(type_i),
     .result(m_result_o));
 
-  initial begin
-    dest_o = 4'b0;
-
-    write_dest_do_o = 1'b0;
-    write_dest_m_o = 1'b0;
-    write_cpsr_o = 1'b0;
-
-    write_o = 1'b0;
-    trans_o = 1'b0;
-  end
-
   always @ (posedge clk) begin
     if (exec_i) begin
       write_dest_do_o <= write_dest_do_i;
