@@ -9,132 +9,132 @@ instruction = namedtuple("instruction", ["opcode", "data"])
 assembler_message = namedtuple("assembler_message", ["file_name", "line_number", "type", "text"])
 
 opcode_t = {
-  "mov": "1101",
-  "mvn": "1111",
-  "add": "0100",
-  "adc": "0101",
-  "sub": "0010",
-  "sbc": "0110",
-  "rsb": "0011",
-  "rsc": "0111",
-  "cmp": "1010",
-  "cmn": "1011",
-  "tst": "1000",
-  "teq": "1001",
-  "and": "0000",
-  "eor": "0001",
-  "orr": "1100",
-  "bic": "1110",
+  "mov": 0b1101,
+  "mvn": 0b1111,
+  "add": 0b0100,
+  "adc": 0b0101,
+  "sub": 0b0010,
+  "sbc": 0b0110,
+  "rsb": 0b0011,
+  "rsc": 0b0111,
+  "cmp": 0b1010,
+  "cmn": 0b1011,
+  "tst": 0b1000,
+  "teq": 0b1001,
+  "and": 0b0000,
+  "eor": 0b0001,
+  "orr": 0b1100,
+  "bic": 0b1110,
 }
 
 cond_t = {
-  "eq": "0000",
-  "ne": "0001",
-  "cs": "0010",
-  "cc": "0011",
-  "mi": "0100",
-  "pl": "0101",
-  "vs": "0110",
-  "vc": "0111",
-  "hi": "1000",
-  "ls": "1001",
-  "ge": "1010",
-  "lt": "1011",
-  "gt": "1100",
-  "le": "1101",
-  "al": "1110"
+  "eq": 0b0000,
+  "ne": 0b0001,
+  "cs": 0b0010,
+  "cc": 0b0011,
+  "mi": 0b0100,
+  "pl": 0b0101,
+  "vs": 0b0110,
+  "vc": 0b0111,
+  "hi": 0b1000,
+  "ls": 0b1001,
+  "ge": 0b1010,
+  "lt": 0b1011,
+  "gt": 0b1100,
+  "le": 0b1101,
+  "al": 0b1110
 }
 
-def check_length(x, length):
-  if (len(x) > length):
-    return [assembler_message(None, None, "Error", fr"invalid constant {(hex(int(x, 2)))} after fixup")]
+def check_size(x, size):
+  if (x > size):
+    return [assembler_message(None, None, "Error", fr"invalid constant {(hex(x))} after fixup")]
   return []
 
 enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
 
-enc_reg = {str(i):fr"{i:04b}" for i in range(14)}
+enc_reg = {str(i):i for i in range(14)}
 
 def enc_a_mode2(groups):
   if "b12_imm" in groups.data:
-    offset = fr"{int(groups.data['b12_imm']):0>12b}"
-    return check_length(offset, 12), offset
+    offset = int(groups.data['b12_imm'])
+    return check_size(offset, 4095), offset
   elif "shift" in groups.data:
     messages, shift = enc_shift(groups)
     return messages, shift
   else:
     rm = enc_reg[groups.data["rm_reg"]]
-    return [], "00000000" + rm
+    return [], rm
 
 def enc_a_mode3(groups):
   if "b8_imm" in groups.data:
     imm = fr"{int(groups.data['b8_imm']):0>8b}"
-    return check_length(imm, 8), (imm[:4], imm[4:])
+    return check_size(imm, 8), (imm[:4], imm[4:])
   else:
     rm = enc_reg[groups.data["rm_reg"]]
     return [], ("0000", rm)
 
 def enc_shift(groups):
   messages = []
-  ret = ""
+  ret = 0
   enc_shift_type = {
-    "lsl": "00",
-    "lsr": "01",
-    "asr": "10",
-    "ror": "11"
+    "lsl": 0b00,
+    "lsr": 0b01,
+    "asr": 0b10,
+    "ror": 0b11
   }
   shift_type = enc_shift_type[groups.data["shift"]]
   if "b5_imm" in groups.data:
-    ret = fr"{int(groups.data['b5_imm']):0>5b}"
-    messages = check_length(ret, 5)
-    ret += shift_type + '0'
+    imm = int(groups.data['b5_imm'])
+    messages = check_size(imm, 31)
+    ret |= imm << 7 | shift_type << 5
   else:
-    ret = enc_reg[groups.data["rs_reg"]] + '0' + shift_type + '1'
-  ret += enc_reg[groups.data["rm_reg"]]
+    ret |= enc_reg[groups.data["rs_reg"]] << 8 | shift_type << 5 | 1 << 4
+  ret |= enc_reg[groups.data["rm_reg"]]
   return messages, ret
 
 enc_oprnd2 = {
   "shift": lambda x: enc_shift(x),
-  "rrx": lambda x: ([], "00000110" + enc_reg[x.data["rm_reg"]]),
-  "reg": lambda x: ([], "00000000" + enc_reg[x.data["rm_reg"]]),
-  "imm": lambda x: (check_length(fr"{int(x.data['b12_imm']):0>12b}", 12), fr"{int(x.data['b12_imm']):0>12b}")
+  "rrx": lambda x: ([], enc_reg[x.data["rm_reg"]]),
+  "reg": lambda x: ([], enc_reg[x.data["rm_reg"]]),
+  "imm": lambda x: (check_size(int(x.data['b12_imm']), 4095), int(x.data['b12_imm']))
 }
 
 def enc_dpi(groups):
   cond = enc_cond(groups)
   oprnd2_type = list(groups.data)[-2]
-  i = '0' if oprnd2_type == "reg" else '1'
+  i = 0 if oprnd2_type == "reg" else 1
   opcode = opcode_t[groups.opcode["opcode"]]
-  s = '0' if 's' not in groups.opcode else '1'
-  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
+  s = 0 if 's' not in groups.opcode else 1
+  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
   rd = enc_reg[groups.data["rd_reg"]]
   messages, oprnd2 = enc_oprnd2[oprnd2_type](groups)
-  return messages, cond + "00" + i + opcode + s + rn + rd + oprnd2
+  return messages, cond << 28 | i << 25 | opcode << 21 | s << 20 | rn << 16 | rd << 12 | oprnd2
 
 def enc_mi(groups):
   cond = enc_cond(groups)
-  a = '0' if groups.opcode["opcode"][1] == "u" else '1'
-  s = '0' if 's' not in groups.opcode else '1'
+  a = 0 if groups.opcode["opcode"][1] == "u" else 1
+  s = 0 if "s" not in groups.opcode else 1
   rd = enc_reg[groups.data["rd_reg"]]
-  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else "0000"
+  rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
   rs = enc_reg[groups.data["rs_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
-  return [], cond + "000000" + a + s + rd + rn + rs + "1001" + rm
+  return [], cond << 28 | a << 21 | s << 20 | rd << 16 | rn << 12 | rs << 8 | 0b1001 << 4 | rm
 
 def enc_mli(groups):
   cond = enc_cond(groups)
-  u = '0' if 's' == groups.opcode["opcode"][0] else '1'
-  a = '0' if groups.opcode["opcode"][2] == 'u' else '1'
-  s = '0' if 's' not in groups.opcode else '1'
+  u = 0 if 's' == groups.opcode["opcode"][0] else 1
+  a = 0 if groups.opcode["opcode"][2] == 'u' else 1
+  s = 0 if 's' not in groups.opcode else 1
   rd_hi = enc_reg[groups.data["rd_hi_reg"]]
   rd_lo = enc_reg[groups.data["rd_lo_reg"]]
   rn = enc_reg[groups.data["rn_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
-  return [], cond + "00001" + u + a + s + rd_hi + rd_lo + rn + "1001" + rm
+  return [], cond << 28 | 1 << 23 | u << 22 | a << 21 | s << 20 | rd_hi << 16 | rd_lo << 12 | rn << 8 | 0b1001 << 4 | rm
 
 def enc_bei(groups):
   cond = enc_cond(groups)
   rn = enc_reg[groups.data["rn_reg"]]
-  return [], cond + "000100101111111111110001" + rn
+  return [], cond << 28 | 0b000100101111111111110001 << 4 | rn
 
 def enc_hdt(groups):
   cond = enc_cond(groups)
@@ -152,25 +152,25 @@ def enc_hdt(groups):
 
 def enc_sdt(groups):
   cond = enc_cond(groups)
-  p = '0' if "post" in groups.data else '1'
-  u = '0' if "sign" in groups.data and groups.data["sign"] == '-' else '1'
-  b = '0' if 'b' not in groups.opcode["opcode"][-2:] else '1'
-  w = '0' if p == '0' or 'pre' not in groups.data else '1'
-  l = '0' if groups.opcode["opcode"][0] == 's' else '1'
+  p = 0 if "post" in groups.data else 1
+  u = 0 if "sign" in groups.data and groups.data["sign"] == '-' else 1
+  b = 0 if 'b' not in groups.opcode["opcode"][-2:] else 1
+  w = 0 if p == 0 or 'pre' not in groups.data else 1
+  l = 0 if groups.opcode["opcode"][0] == 's' else 1
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
   messages, a_mode = enc_a_mode2(groups)
-  return messages, cond + "011" + p + u + b + w + l + rn + rd + a_mode
+  return messages, cond << 28 | 0b011 << 25 | p << 24 | u << 23 | b << 22 | w << 21 | l << 20 | rn << 16 | rd << 12 | a_mode
 
 def enc_bi(groups):
   cond = enc_cond(groups)
-  l = '0' if groups.opcode["opcode"] == "b" else '1'
-  offset = fr"{int(groups.data['label_imm']):0>24b}"
-  return [], cond + "101" + l + offset
+  l = 0 if groups.opcode["opcode"] == "b" else 1
+  offset = int(groups.data['label_imm'])
+  return [], cond << 28 | 0b101 << 25 | l << 24 | offset
 
 def enc_nop(groups):
   cond = enc_cond(groups)
-  return [], cond + "0011001000001111000000000000"
+  return [], cond << 28 | 0b0011001000001111000000000000
 
 suffix_re = "(?P<s>s)?"
 
@@ -312,7 +312,7 @@ def assemble(messages, files):
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
                 i_messages, i_enc = fn(instruction(opcode_groups, data_groups))
                 messages += [assembler_message(f, line, i.type, i.text) for i in i_messages]
-                obj.append((fr"{int(i_enc, 2):<04x}"))
+                obj.append(i_enc.to_bytes(4, "big"))
                 break
           if not data_match:
             messages.append(assembler_message(f, line, "Error", fr"no such data for \"{i.opcode}\": \"{i.data}\""))
@@ -346,10 +346,10 @@ def main():
     print('\n'.join(message_strs))
     sys.exit(1)
   else:
-    flat = ''.join(obj)
-    out = '\n'.join([flat[i:i+2] for i in range(0, len(flat), 2)])
-    open(objfile, 'w').write(out)
-    open(".memory", 'w').write(out)
+    obj_out = b"".join(obj)
+    mem_out = "\n".join([f"{b:>02x}" for b in obj_out])
+    open(objfile, 'wb').write(obj_out)
+    open(".memory", 'w').write(mem_out)
     sys.exit(0)
 
 if __name__ == "__main__":
