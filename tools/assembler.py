@@ -312,7 +312,7 @@ def assemble(messages, files):
                 opcode_groups = {j:k for j, k in opcode_match.groupdict().items() if k}
                 i_messages, i_enc = fn(instruction(opcode_groups, data_groups))
                 messages += [assembler_message(f, line, i.type, i.text) for i in i_messages]
-                obj.append(i_enc.to_bytes(4, "big"))
+                obj.append(i_enc.to_bytes(4, "little"))
                 break
           if not data_match:
             messages.append(assembler_message(f, line, "Error", f"no such data for \"{i.opcode}\": \"{i.data}\""))

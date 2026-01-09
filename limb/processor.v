@@ -24,10 +24,10 @@ module memory_controller (
     if (trans == 2'b10 || trans == 2'b11) begin
       case (write)
         0: begin
-          rdata <= {memory[addr], memory[addr+1], memory[addr+2], memory[addr+3]};
+          rdata <= {memory[addr+3], memory[addr+2], memory[addr+1], memory[addr]};
         end
         1: begin
-          {memory[addr], memory[addr+1], memory[addr+2], memory[addr+3]} <= wdata;
+          {memory[addr+3], memory[addr+2], memory[addr+1], memory[addr]} <= wdata;
         end
       endcase
     end
