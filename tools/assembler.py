@@ -47,7 +47,7 @@ cond_t = {
 
 def check_size(x, size):
   if (x > size):
-    return [assembler_message(None, None, "Error", fr"invalid constant {(hex(x))} after fixup")]
+    return [assembler_message(None, None, "Error", f"invalid constant {(hex(x))} after fixup")]
   return []
 
 enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
@@ -67,7 +67,7 @@ def enc_a_mode2(groups):
 
 def enc_a_mode3(groups):
   if "b8_imm" in groups.data:
-    imm = fr"{int(groups.data['b8_imm']):0>8b}"
+    imm = f"{int(groups.data['b8_imm']):0>8b}"
     return check_size(imm, 8), (imm[:4], imm[4:])
   else:
     rm = enc_reg[groups.data["rm_reg"]]
@@ -277,7 +277,7 @@ def preprocess(messages, filenames):
     try:
       f = open(filename, 'r').read()
     except:
-      messages.append(assembler_message(None, None, "Error", fr"can't open {filename}"))
+      messages.append(assembler_message(None, None, "Error", f"can't open {filename}"))
       return []
     else:
       f = re.sub(r"\/\*(?:.|\n)*\*\/", '', f)
@@ -315,10 +315,10 @@ def assemble(messages, files):
                 obj.append(i_enc.to_bytes(4, "big"))
                 break
           if not data_match:
-            messages.append(assembler_message(f, line, "Error", fr"no such data for \"{i.opcode}\": \"{i.data}\""))
+            messages.append(assembler_message(f, line, "Error", f"no such data for \"{i.opcode}\": \"{i.data}\""))
           break
       if not opcode_match:
-        messages.append(assembler_message(f, line, "Error", fr"no such instruction opcode: \"{i.opcode}\""))
+        messages.append(assembler_message(f, line, "Error", f"no such instruction opcode: \"{i.opcode}\""))
   return obj
 
 def main():
@@ -335,12 +335,12 @@ def main():
           objfile = args[i+1]
           del args[i+1]
       else:
-        messages.append(assembler_message(None, None, "Error", fr"unrecognized option: \"{j}\""))
+        messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
     else:
       filenames.append(j)
   obj = "" if messages else assemble(messages, preprocess(messages, set(filenames)))
   if messages:
-    message_to_str = lambda message: (fr"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
+    message_to_str = lambda message: (f"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
     message_strs = [message_to_str(i) for i in messages]
     print("Assembler messages:")
     print('\n'.join(message_strs))
