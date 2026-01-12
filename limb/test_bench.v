@@ -39,6 +39,10 @@ module test_bench;
 
   initial begin
     $monitor("%d\t%d\t%d\t%d\t%d", clk, p.opcode_w, p.a_w, p.b_w, p.result_w);
+
+    $dumpfile("dump.vcd");
+    $dumpvars(0, test_bench);
+
     clk = 1'b0;
     #64 $finish;
   end
