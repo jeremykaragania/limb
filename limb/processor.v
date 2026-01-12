@@ -9,6 +9,7 @@ module memory_controller (
   input [31:0] wdata,
   output reg [31:0] rdata,
   output reg abort,
+  output reg data_valid,
   input write,
   input size,
   input [1:0] prot,
@@ -22,6 +23,7 @@ module memory_controller (
 
   always @ (posedge clk) begin
     if (trans == 2'b10 || trans == 2'b11) begin
+      data_valid <= 1'b1;
       case (write)
         0: begin
           rdata <= {memory[addr+3], memory[addr+2], memory[addr+1], memory[addr]};
@@ -30,6 +32,9 @@ module memory_controller (
           {memory[addr+3], memory[addr+2], memory[addr+1], memory[addr]} <= wdata;
         end
       endcase
+    end
+    else begin
+      data_valid <= 1'b0;
     end
   end
 endmodule
