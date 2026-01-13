@@ -6,6 +6,7 @@ module test_bench;
   wire [31:0] addr_w;
   wire [31:0] wdata_w;
   wire [31:0] rdata_w;
+  wire data_valid_w;
   wire abort;
   wire write_w;
   wire size_w;
@@ -19,6 +20,7 @@ module test_bench;
     .addr(addr_w),
     .wdata(wdata_w),
     .rdata(rdata_w),
+    .data_valid(data_valid_w),
     .abort(abort_w),
     .write(write_w),
     .size(size_w),
@@ -28,6 +30,7 @@ module test_bench;
   memory_controller mc (
     .clk(clk),
 
+    .data_valid(data_valid_w),
     .addr(addr_w),
     .wdata(wdata_w),
     .rdata(rdata_w),

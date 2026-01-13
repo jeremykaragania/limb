@@ -87,6 +87,7 @@ module processor (
   output [31:0] addr,
   output [31:0] wdata,
   input [31:0] rdata,
+  input data_valid,
   input abort,
   output write,
   output size,
