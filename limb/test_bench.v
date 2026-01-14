@@ -7,7 +7,7 @@ module test_bench;
   wire [31:0] wdata_w;
   wire [31:0] rdata_w;
   wire data_valid_w;
-  wire abort;
+  wire abort_w;
   wire write_w;
   wire size_w;
   wire [1:0] prot_w;
