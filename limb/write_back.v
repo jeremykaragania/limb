@@ -3,6 +3,7 @@
 
 module write_back (
   input clk,
+  input rst,
 
   input [3:0] dest_i,
 
@@ -24,6 +25,11 @@ module write_back (
   end
 
   always @ (posedge clk) begin
+    if (rst) begin
+      rw_i_o <= 6'b0;
+      rw_o <= 32'b0;
+      cpsr_o <= 32'b0;
+    end
     if (write_dest_do_i) begin
       rw_i_o <= dest_i;
       rw_o <= result_i;

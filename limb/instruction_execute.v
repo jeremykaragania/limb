@@ -3,6 +3,7 @@
 
 module instruction_execute (
   input clk,
+  input rst,
 
   input exec_i,
 
@@ -38,6 +39,7 @@ module instruction_execute (
 
   arithmetic_logic_unit alu (
     .clk(clk),
+    .rst(rst),
     .a(a_i),
     .b(b_i),
     .cpsr(cpsr_i),
@@ -46,6 +48,7 @@ module instruction_execute (
 
   multiplier m(
     .clk(clk),
+    .rst(rst),
     .a(a_i),
     .b(b_i),
     .c(c_i),
@@ -54,6 +57,16 @@ module instruction_execute (
     .result(m_result_o));
 
   always @ (posedge clk) begin
+    if (rst) begin
+      dest_o <= 4'b0;
+
+      write_dest_do_o <= 1'b0;
+      write_dest_m_o <= 1'b0;
+      write_cpsr_o <= 1'b0;
+
+      write_o <= 1'b0;
+      trans_o <= 2'b0;
+    end
     if (exec_i) begin
       write_dest_do_o <= write_dest_do_i;
       write_dest_m_o <= write_dest_m_i;

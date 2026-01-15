@@ -5,6 +5,7 @@
 
 module memory_controller (
   input clk,
+  input rst,
   input [31:0] addr,
   input [31:0] wdata,
   output reg [31:0] rdata,
@@ -22,7 +23,12 @@ module memory_controller (
   end
 
   always @ (posedge clk) begin
-    if (trans == 2'b10 || trans == 2'b11) begin
+    if (rst) begin
+      rdata <= 32'b0;
+      abort <= 1'b0;
+      data_valid <= 1'b0;
+    end
+    else if (trans == 2'b10 || trans == 2'b11) begin
       data_valid <= 1'b1;
       case (write)
         0: begin
@@ -41,6 +47,7 @@ endmodule
 
 module register_file (
   input clk,
+  input rst,
   // Register write.
   input [5:0] rw_i_i,
   input [31:0] rw_i,
@@ -69,19 +76,28 @@ module register_file (
   end
 
   always @ (*) begin
-    r[rw_i_i] = rw_i;
-    rr1_o = r[rr1_i_i];
-    rr2_o = r[rr2_i_i];
-    rr3_o = r[rr3_i_i];
-    rr4_o = r[rr4_i_i];
-    cpsr = cpsr_i;
-    cpsr_o = cpsr;
+    if (rst) begin
+      rr1_o <= 32'b0;
+      rr2_o <= 32'b0;
+      rr3_o <= 32'b0;
+      rr4_o <= 32'b0;
+      cpsr_o <= 32'b0;
+    end
+    else begin
+      r[rw_i_i] = rw_i;
+      rr1_o = r[rr1_i_i];
+      rr2_o = r[rr2_i_i];
+      rr3_o = r[rr3_i_i];
+      rr4_o = r[rr4_i_i];
+      cpsr = cpsr_i;
+      cpsr_o = cpsr;
+    end
   end
 endmodule
 
 module processor (
   input clk,
-  input n_reset,
+  input rst,
 
   // Memory interface.
   output [31:0] addr,
@@ -144,6 +160,7 @@ module processor (
 
   register_file rf_m (
     .clk(clk),
+    .rst(rst),
     .rw_i_i(rw_i_i_w),
     .rw_i(rw_i_w),
     .cpsr_i(cpsr_i_w),
@@ -161,6 +178,7 @@ module processor (
 
   instruction_fetch if_m (
     .clk(clk),
+    .rst(rst),
     .write_pc_i(write_pc_w),
     .pc_i(pc_w),
     .instr_i(rdata),
@@ -206,6 +224,7 @@ module processor (
 
   instruction_execute ie_m (
     .clk(clk),
+    .rst(rst),
 
     .exec_i(e_exec_w),
 
@@ -240,24 +259,26 @@ module processor (
     .m_result_o(m_result_w));
 
   write_back wb_m (
-  .clk(clk),
+    .clk(clk),
+    .rst(rst),
 
-  .dest_i(dest),
+    .dest_i(dest),
 
-  .write_dest_do_i(write_dest_do),
-  .write_dest_m_i(write_dest_m),
-  .write_cpsr_i(write_cpsr),
+    .write_dest_do_i(write_dest_do),
+    .write_dest_m_i(write_dest_m),
+    .write_cpsr_i(write_cpsr),
 
-  .result_i(result_w),
-  .m_result_i(m_result_w),
+    .result_i(result_w),
+    .m_result_i(m_result_w),
 
-  .rw_i_o(rw_i_i_w),
-  .rw_o(rw_i_w),
-  .cpsr_o(cpsr_i_w));
+    .rw_i_o(rw_i_i_w),
+    .rw_o(rw_i_w),
+    .cpsr_o(cpsr_i_w));
 endmodule
 
 module arithmetic_logic_unit (
   input clk,
+  input rst,
   input [31:0] a,
   input [31:0] b,
   input [31:0] cpsr,
@@ -265,73 +286,79 @@ module arithmetic_logic_unit (
   output reg [31:0] result);
 
   always @ (posedge clk) begin
-    case (opcode)
-      4'b1101: begin // MOV
-        result <= b;
-      end
-      4'b1111: begin // MVN
-        result <= ~b;
-      end
-      4'b0100: begin // ADD
-        result <= a + b;
-      end
-      4'b0101: begin // ADC
-        result <= a + b + cpsr[29];
-      end
-      4'b0010: begin // SUB
-        result <= a - b;
-      end
-      4'b0110: begin // SBC
-        result <= a - b - cpsr[29];
-      end
-      4'b0011: begin // RSB
-        result <= b - a;
-      end
-      4'b0111: begin // RSC
-        result <= b - a - cpsr[29];
-      end
-      4'b1010: begin // CMP
-        result[31] <= ($unsigned(a) + $unsigned(~b) + $unsigned(1)) >> 32'd31;
-        result[30] <= !(a + ~b + 32'b1);
-        result[29] <= $unsigned((a + ~b + 32'b1) >> 32'b1) != (a + ~b + 32'b1);
-        result[28] <= $signed((a + ~b + 32'b1) >> 32'b1) != ($signed(a) + $signed(~b) + $unsigned(32'b1));
-        result[27:0] <= cpsr[27:0];
-      end
-      4'b1011: begin // CMN
-        result[31] <= ($unsigned(a) + $unsigned(b) + $unsigned(1)) >> 32'd31;
-        result[30] <= !(a + ~b + 32'b1);
-        result[29] <= $unsigned((a + b + 32'b1) >> 32'b1) != (a + b + 32'b1);
-        result[28] <= $signed((a + b + 32'b1) >> 32'b1) != ($signed(a) + $signed(b) + $unsigned(32'b1));
-        result[27:0] <= cpsr[27:0];
-      end
-      4'b1000: begin // TST
-        result[31] <= (a & b) >> 32'd31;
-        result[30] <= !(a & b);
-        result[29:0] <= cpsr[29:0];
-      end
-      4'b1001: begin // TEQ
-        result[31] <= (a ^ b) >> 32'd31;
-        result[30] <= !(a & b);
-        result[29:0] <= cpsr[29:0];
-      end
-      4'b0000: begin // AND
-        result <= a & b;
-      end
-      4'b0001: begin // EOR
-        result <= a ^ b;
-      end
-      4'b1100: begin // ORR
-        result <= a | b;
-      end
-      4'b1110: begin // BIC
-        result <= a & ~b;
-      end
-    endcase
+    if (rst) begin
+      result <= 32'b0;
+    end
+    else begin
+      case (opcode)
+        4'b1101: begin // MOV
+          result <= b;
+        end
+        4'b1111: begin // MVN
+          result <= ~b;
+        end
+        4'b0100: begin // ADD
+          result <= a + b;
+        end
+        4'b0101: begin // ADC
+          result <= a + b + cpsr[29];
+        end
+        4'b0010: begin // SUB
+          result <= a - b;
+        end
+        4'b0110: begin // SBC
+          result <= a - b - cpsr[29];
+        end
+        4'b0011: begin // RSB
+          result <= b - a;
+        end
+        4'b0111: begin // RSC
+          result <= b - a - cpsr[29];
+        end
+        4'b1010: begin // CMP
+          result[31] <= ($unsigned(a) + $unsigned(~b) + $unsigned(1)) >> 32'd31;
+          result[30] <= !(a + ~b + 32'b1);
+          result[29] <= $unsigned((a + ~b + 32'b1) >> 32'b1) != (a + ~b + 32'b1);
+          result[28] <= $signed((a + ~b + 32'b1) >> 32'b1) != ($signed(a) + $signed(~b) + $unsigned(32'b1));
+          result[27:0] <= cpsr[27:0];
+        end
+        4'b1011: begin // CMN
+          result[31] <= ($unsigned(a) + $unsigned(b) + $unsigned(1)) >> 32'd31;
+          result[30] <= !(a + ~b + 32'b1);
+          result[29] <= $unsigned((a + b + 32'b1) >> 32'b1) != (a + b + 32'b1);
+          result[28] <= $signed((a + b + 32'b1) >> 32'b1) != ($signed(a) + $signed(b) + $unsigned(32'b1));
+          result[27:0] <= cpsr[27:0];
+        end
+        4'b1000: begin // TST
+          result[31] <= (a & b) >> 32'd31;
+          result[30] <= !(a & b);
+          result[29:0] <= cpsr[29:0];
+        end
+        4'b1001: begin // TEQ
+          result[31] <= (a ^ b) >> 32'd31;
+          result[30] <= !(a & b);
+          result[29:0] <= cpsr[29:0];
+        end
+        4'b0000: begin // AND
+          result <= a & b;
+        end
+        4'b0001: begin // EOR
+          result <= a ^ b;
+        end
+        4'b1100: begin // ORR
+          result <= a | b;
+        end
+        4'b1110: begin // BIC
+          result <= a & ~b;
+        end
+      endcase
+    end
   end
 endmodule
 
 module multiplier(
   input clk,
+  input rst,
   input [31:0] a,
   input [31:0] b,
   input [31:0] c,
@@ -340,25 +367,30 @@ module multiplier(
   output reg [63:0] result);
 
   always @ (posedge clk) begin
-    case (type)
-      3'b000: begin // MUL
-        result <= $signed(a) * $signed(b);
-      end
-      3'b001: begin // MLA
-        result <= $signed(a) * $signed(b) + $signed(c);
-      end
-      3'b100: begin // SMULL
-        result <= $unsigned(a) * $unsigned(b);
-      end
-      3'b101: begin // SMLAL
-        result <= $unsigned(a) * $unsigned(b) + $signed({c, d});
-      end
-      3'b110: begin // UMULL
-        result <= $unsigned(a) * $unsigned(b);
-      end
-      3'b111: begin // UMLAL
-        result <= $unsigned(a) * $unsigned(b) + $unsigned({c, d});
-      end
-    endcase
+    if (rst) begin
+      result <= 64'b0;
+    end
+    else begin
+      case (type)
+        3'b000: begin // MUL
+          result <= $signed(a) * $signed(b);
+        end
+        3'b001: begin // MLA
+          result <= $signed(a) * $signed(b) + $signed(c);
+        end
+        3'b100: begin // SMULL
+          result <= $unsigned(a) * $unsigned(b);
+        end
+        3'b101: begin // SMLAL
+          result <= $unsigned(a) * $unsigned(b) + $signed({c, d});
+        end
+        3'b110: begin // UMULL
+          result <= $unsigned(a) * $unsigned(b);
+        end
+        3'b111: begin // UMLAL
+          result <= $unsigned(a) * $unsigned(b) + $unsigned({c, d});
+        end
+      endcase
+    end
   end
 endmodule

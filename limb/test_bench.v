@@ -2,6 +2,7 @@
 
 module test_bench;
   reg clk;
+  reg rst;
 
   wire [31:0] addr_w;
   wire [31:0] wdata_w;
@@ -15,7 +16,7 @@ module test_bench;
 
   processor p(
     .clk(clk),
-    .n_reset(n_reset),
+    .rst(rst),
 
     .addr(addr_w),
     .wdata(wdata_w),
@@ -29,6 +30,7 @@ module test_bench;
 
   memory_controller mc (
     .clk(clk),
+    .rst(rst),
 
     .data_valid(data_valid_w),
     .addr(addr_w),
@@ -47,6 +49,10 @@ module test_bench;
     $dumpvars(0, test_bench);
 
     clk = 1'b0;
+    rst = 1'b1;
+    #2
+    rst = 1'b0;
+
     #64 $finish;
   end
 
