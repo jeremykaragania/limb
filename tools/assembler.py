@@ -48,6 +48,7 @@ cond_t = {
 def check_size(x, size):
   if (x > size):
     return [assembler_message(None, None, "Error", f"invalid constant {(hex(x))} after fixup")]
+
   return []
 
 enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opcode else cond_t["al"]
@@ -83,13 +84,16 @@ def enc_shift(groups):
     "ror": 0b11
   }
   shift_type = enc_shift_type[groups.data["shift"]]
+
   if "b5_imm" in groups.data:
     imm = int(groups.data['b5_imm'])
     messages = check_size(imm, 31)
     ret |= imm << 7 | shift_type << 5
   else:
     ret |= enc_reg[groups.data["rs_reg"]] << 8 | shift_type << 5 | 1 << 4
+
   ret |= enc_reg[groups.data["rm_reg"]]
+
   return messages, ret
 
 enc_oprnd2 = {
@@ -108,6 +112,7 @@ def enc_dpi(groups):
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
   rd = enc_reg[groups.data["rd_reg"]]
   messages, oprnd2 = enc_oprnd2[oprnd2_type](groups)
+
   return messages, cond << 28 | i << 25 | opcode << 21 | s << 20 | rn << 16 | rd << 12 | oprnd2
 
 def enc_mi(groups):
@@ -118,6 +123,7 @@ def enc_mi(groups):
   rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
   rs = enc_reg[groups.data["rs_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
+
   return [], cond << 28 | a << 21 | s << 20 | rd << 16 | rn << 12 | rs << 8 | 0b1001 << 4 | rm
 
 def enc_mli(groups):
@@ -129,11 +135,13 @@ def enc_mli(groups):
   rd_lo = enc_reg[groups.data["rd_lo_reg"]]
   rn = enc_reg[groups.data["rn_reg"]]
   rm = enc_reg[groups.data["rm_reg"]]
+
   return [], cond << 28 | 1 << 23 | u << 22 | a << 21 | s << 20 | rd_hi << 16 | rd_lo << 12 | rn << 8 | 0b1001 << 4 | rm
 
 def enc_bei(groups):
   cond = enc_cond(groups)
   rn = enc_reg[groups.data["rn_reg"]]
+
   return [], cond << 28 | 0b000100101111111111110001 << 4 | rn
 
 def enc_hdt(groups):
@@ -148,6 +156,7 @@ def enc_hdt(groups):
   a_mode3 = enc_a_mode3(groups)
   s = '0' if 's' not in groups.opcode["opcode"][-2:] else '1'
   h = '0' if groups.opcode["opcode"][-1] != 'h' else '1'
+
   return [], cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
 
 def enc_sdt(groups):
@@ -160,12 +169,14 @@ def enc_sdt(groups):
   rn = enc_reg[groups.data["rn_reg"]]
   rd = enc_reg[groups.data["rd_reg"]]
   messages, a_mode = enc_a_mode2(groups)
+
   return messages, cond << 28 | 0b011 << 25 | p << 24 | u << 23 | b << 22 | w << 21 | l << 20 | rn << 16 | rd << 12 | a_mode
 
 def enc_bi(groups):
   cond = enc_cond(groups)
   l = 0 if groups.opcode["opcode"] == "b" else 1
   offset = int(groups.data['label_imm'])
+
   return [], cond << 28 | 0b101 << 25 | l << 24 | offset
 
 def enc_nop(groups):
@@ -188,6 +199,7 @@ def shift_re(group, is_oprnd2):
   ret += r'' if is_oprnd2 else r",\s*"
   ret += fr"(?P<shift>{group})\s+"
   ret += fr"(?:{reg_re(f'rs')}|{imm_re(f'b5')})" if is_oprnd2 else fr"{imm_re('b5')}"
+
   return ret
 
 oprnd2_re = (
@@ -226,12 +238,15 @@ a_mode3_re = (
 def fold(x):
   if len(x) == 1:
     return x
+
   while True:
     fst, snd, other = x[0], x[1], x[2:]
     ret = []
+
     for j in fst:
       for k in snd:
         ret += [[j, k]]
+
     if other:
       x = [ret] + other
     else:
@@ -239,10 +254,12 @@ def fold(x):
 
 def unfold(x):
   ret = []
+
   while True:
     fst, snd = x[0], x[-1]
     ret = [snd] + ret
     x = fst
+
     if not isinstance(x, list):
       ret = [x] + ret
       return ret
@@ -251,6 +268,7 @@ def opcode_re(opcode, has_cond, has_s):
   opcode = fr"(?P<opcode>{'|'.join(opcode)})"
   cond = condition_re if has_cond else ''
   s = fr"(?P<s>s)?" if has_s else ''
+
   return fr"^{opcode}{cond}{s}$"
 
 data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in fold(res)]
@@ -273,6 +291,7 @@ enc_instruction = [(instruction(re.compile(i.opcode), [re.compile(k) for k in i.
 
 def preprocess(messages, filenames):
   files = {}
+
   for filename in filenames:
     try:
       f = open(filename, 'r').read()
@@ -283,29 +302,39 @@ def preprocess(messages, filenames):
       f = re.sub(r"\/\*(?:.|\n)*\*\/", '', f)
       f = f.split('\n')
       files[filename] = []
+
       for line, i in enumerate(f):
         if not i or i.isspace():
           continue
+
         opcode = ""
         data = ""
+
         try:
           opcode, data = i.split(maxsplit=1)
         except ValueError:
           opcode = i
+
         files[filename].append(instruction(opcode.lower(), data.rstrip().lower()))
+
   return files
 
 def assemble(messages, files):
   obj = []
+
   for f in files:
     for line, i in enumerate(files[f]):
       opcode_match = 0
+
       for i_re, fn in enc_instruction:
         opcode_match = i_re.opcode.match(i.opcode)
+
         if opcode_match:
           data_match = 0
+
           for j in i_re.data:
             data_match = j.match(i.data)
+
             if data_match:
               if not messages:
                 data_groups = {j:k for j, k in data_match.groupdict().items() if k}
@@ -314,11 +343,14 @@ def assemble(messages, files):
                 messages += [assembler_message(f, line, i.type, i.text) for i in i_messages]
                 obj.append(i_enc.to_bytes(4, "little"))
                 break
+
           if not data_match:
             messages.append(assembler_message(f, line, "Error", f"no such data for \"{i.opcode}\": \"{i.data}\""))
           break
+
       if not opcode_match:
         messages.append(assembler_message(f, line, "Error", f"no such instruction opcode: \"{i.opcode}\""))
+
   return obj
 
 def main():
@@ -326,6 +358,7 @@ def main():
   filenames = []
   messages = []
   objfile = "a.out"
+
   for i, j in enumerate(args):
     if j[0] == '-':
       if j[1] == 'o':
@@ -338,7 +371,9 @@ def main():
         messages.append(assembler_message(None, None, "Error", f"unrecognized option: \"{j}\""))
     else:
       filenames.append(j)
+
   obj = "" if messages else assemble(messages, preprocess(messages, set(filenames)))
+
   if messages:
     message_to_str = lambda message: (f"{message[0]}:{message[1]+1}: " if message.file_name else "") + ": ".join(message[2:])
     message_strs = [message_to_str(i) for i in messages]
