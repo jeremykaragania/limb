@@ -50,6 +50,7 @@ module instruction_decode (
 
   reg e_oprnd2_t;
   reg [31:0] cpsr;
+  reg [3:0] uop_class;
 
   initial begin
     e_oprnd2_t = 1'b0;
@@ -65,6 +66,7 @@ module instruction_decode (
       e_write_cpsr = 1'b0;
     end
     else if (!instr_i[25] && instr_i[7] && instr_i[4]) begin // Multiply or multiply accumulate.
+      uop_class = `UOP_INTEGER_M;
       e_do_cycle = 1'b0;
       e_m_ma_cycle = 1'b1;
       e_dest = instr_i[19:16];
@@ -82,6 +84,7 @@ module instruction_decode (
       type = instr_i[23:21];
     end
     else if (instr_i[27:26] == 2'b00) begin // Data processing instruction.
+      uop_class = `UOP_INTEGER;
       e_do_cycle = 1'b1;
       e_oprnd2_t = instr_i[25];
       e_oprnd2 = instr_i[11:0];
