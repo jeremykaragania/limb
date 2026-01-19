@@ -52,6 +52,38 @@ module instruction_decode (
   reg [31:0] cpsr;
   reg [3:0] uop_class;
 
+  // Condition.
+  wire [3:0] cond = instr_i[31:28];
+
+  // Data processing.
+  wire [3:0] dp_opcode = instr_i[24:21];
+  wire [3:0] dp_rn = instr_i[19:16];
+  wire [3:0] dp_rd = instr_i[15:12];
+  wire [3:0] dp_oprnd_2 = instr_i[11:0];
+
+  // Multiply.
+  wire [3:0] m_rd = instr_i[19:16];
+  wire [3:0] m_rn = instr_i[15:12];
+  wire [3:0] m_rs = instr_i[11:8];
+  wire [3:0] m_rm = instr_i[3:0];
+
+  // Multiply long.
+  wire [3:0] ml_rd_hi = instr_i[19:16];
+  wire [3:0] ml_rn_lo = instr_i[15:12];
+  wire [3:0] ml_rn = instr_i[11:8];
+  wire [3:0] ml_rm = instr_i[3:0];
+
+  // Branch exchange.
+  wire [3:0] be_rn = instr_i[3:0];
+
+  // Single data transfer.
+  wire [3:0] sdt_rn = instr_i[19:16];
+  wire [3:0] sdt_rd = instr_i[15:12];
+  wire [11:0] sdt_offset = instr_i[11:0];
+
+  // Branch.
+  wire [23:0] b_offset = instr_i[23:0];
+
   initial begin
     e_oprnd2_t = 1'b0;
     cpsr = 32'b0;
