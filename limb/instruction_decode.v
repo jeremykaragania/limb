@@ -29,7 +29,6 @@ module instruction_decode (
   output reg [5:0] rr3_i_o,
   output reg [5:0] rr4_i_o,
 
-  output reg [3:0] cond_o,
   output reg e_exec,
   output reg [11:0] e_oprnd2,
   output reg [3:0] e_dest,
@@ -90,7 +89,6 @@ module instruction_decode (
   end
 
   always @ (*) begin
-    cond_o = instr_i[31:28];
     if (instr_i[27:0] == `NOP) begin // No operation.
       e_do_cycle = 1'b0;
       e_write_dest_do = 1'b0;
@@ -166,7 +164,7 @@ module instruction_decode (
       e_exec = 1'b0;
     end
 
-    case (cond_o)
+    case (cond)
       4'b0000: begin // EQ
         if (cpsr[30]) begin
           e_exec = 1'b1;

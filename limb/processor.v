@@ -130,7 +130,6 @@ module processor (
   wire [31:0] pc_w;
 
   // Instruction decode.
-  wire [3:0] cond_o_w;
   wire e_exec_w;
   wire [11:0] e_oprnd2_w;
   wire [3:0] e_dest_w;
@@ -203,7 +202,6 @@ module processor (
     .rr3_i_o(rr3_i_i_w),
     .rr4_i_o(rr4_i_i_w),
 
-    .cond_o(cond_o_w),
     .e_exec(e_exec_w),
     .e_oprnd2(e_oprnd2_w),
     .e_dest(e_dest_w),
