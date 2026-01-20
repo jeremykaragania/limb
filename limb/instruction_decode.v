@@ -99,14 +99,14 @@ module instruction_decode (
       uop_class = `UOP_INTEGER_M;
       e_do_cycle = 1'b0;
       e_m_ma_cycle = 1'b1;
-      e_dest = instr_i[19:16];
+      e_dest = m_rd;
       e_write_dest_do = 1'b0;
       e_write_dest_m = !instr_i[23];
       e_write_cpsr = 1'b0;
-      rr1_i_o = instr_i[3:0];
-      rr2_i_o = instr_i[11:8];
-      rr3_i_o = instr_i[19:16];
-      rr4_i_o = instr_i[15:12];
+      rr1_i_o = m_rm;
+      rr2_i_o = m_rs;
+      rr3_i_o = m_rd;
+      rr4_i_o = m_rn;
       a = rr1_i;
       b = rr2_i;
       c = rr3_i;
@@ -117,9 +117,9 @@ module instruction_decode (
       uop_class = `UOP_INTEGER;
       e_do_cycle = 1'b1;
       e_oprnd2_t = instr_i[25];
-      e_oprnd2 = instr_i[11:0];
-      opcode = instr_i[24:21];
-      rr1_i_o = instr_i[19:16];
+      e_oprnd2 = dp_oprnd_2;
+      opcode = dp_opcode;
+      rr1_i_o = dp_rn;
       rr2_i_o = e_oprnd2;
 
       /*
@@ -141,12 +141,12 @@ module instruction_decode (
         b = result_i;
       end
       else begin
-        b = instr_i[25] ? instr_i[11:0] : rr2_i;
+        b = instr_i[25] ? dp_oprnd_2 : rr2_i;
       end
 
       e_dest = instr_i[15:12];
 
-      if (instr_i[24:21] == 4'b1010 || instr_i[24:21] == 4'b1011 || instr_i[24:21] == 4'b1000 || instr_i[24:21] == 4'b1001) begin
+      if (dp_opcode == 4'b1010 || dp_opcode == 4'b1011 || dp_opcode == 4'b1000 || dp_opcode == 4'b1001) begin
         e_write_dest_do = 1'b1;
         e_write_dest_m = 1'b0;
         e_write_cpsr = 1'b1;
