@@ -275,7 +275,13 @@ def opcode_re(opcode, has_cond, has_s):
 
   return fr"^{opcode}{cond}{s}$"
 
-data_re = lambda res: fold(res)[0] if len(fold(res)) == 1 and not isinstance(fold(res)[0][0], list) else [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in fold(res)]
+def data_re(res):
+    f = fold(res)
+
+    if len(f == 1 and not isinstance(f[0][0], list):
+        return f[0]
+
+    return [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in fold(res)]
 
 instruction_t = (
   (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
