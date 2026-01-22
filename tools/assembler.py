@@ -278,10 +278,10 @@ def opcode_re(opcode, has_cond, has_s):
 def data_re(res):
     f = fold(res)
 
-    if len(f == 1 and not isinstance(f[0][0], list):
+    if len(f) == 1 and not isinstance(f[0][0], list):
         return f[0]
 
-    return [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in fold(res)]
+    return [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in f]
 
 instruction_t = (
   (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
