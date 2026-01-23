@@ -239,33 +239,27 @@ a_mode3_re = (
   a_mode2_re[8]
 )
 
-def fold(x):
+def cart(x):
   if len(x) == 1:
     return x
 
   while True:
-    fst, snd, other = x[0], x[1], x[2:]
     ret = []
+    fst, snd, other = x[0], x[1], x[2:]
 
-    for j in fst:
-      for k in snd:
-        ret += [[j, k]]
+    for i in fst:
+      if not isinstance(i, list):
+        i = [i]
+
+      for j in snd:
+        if not isinstance(j, list):
+          j = [j]
+
+          ret.append(i + j)
 
     if other:
       x = [ret] + other
     else:
-      return ret
-
-def unfold(x):
-  ret = []
-
-  while True:
-    fst, snd = x[0], x[-1]
-    ret = [snd] + ret
-    x = fst
-
-    if not isinstance(x, list):
-      ret = [x] + ret
       return ret
 
 def opcode_re(opcode, has_cond, has_s):
@@ -276,12 +270,7 @@ def opcode_re(opcode, has_cond, has_s):
   return fr"^{opcode}{cond}{s}$"
 
 def data_re(res):
-    f = fold(res)
-
-    if len(f) == 1 and not isinstance(f[0][0], list):
-        return f[0]
-
-    return [r'^' + r"\s*,\s*".join(unfold(i)) + r'$' for i in f]
+    return [r'^' + r"\s*,\s*".join(i) + r'$' for i in cart(res)]
 
 instruction_t = (
   (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
