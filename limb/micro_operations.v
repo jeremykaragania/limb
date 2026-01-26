@@ -9,4 +9,9 @@
 `define UOP_STORE       4'd5
 `define UOP_FP          4'd6
 
+// UOP bit positions.
+`define UOP_VALID_B     63
+`define UOP_CLASS_MSB   62
+`define UOP_CLASS_LSB   61
+
 `endif
