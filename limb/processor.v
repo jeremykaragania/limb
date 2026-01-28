@@ -187,6 +187,7 @@ module processor (
 
   instruction_decode id_m (
     .clk(clk),
+    .rst(rst),
 
     .instr_i(instr_f_w),
 
