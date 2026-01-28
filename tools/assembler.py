@@ -199,8 +199,8 @@ sign_re = fr"(?P<sign>[+|-]\s*)?"
 
 def shift_re(group, is_oprnd2):
     ret = '' if is_oprnd2 else sign_re
-    ret += fr"{reg_re('rm')}\s*"
-    ret += r'' if is_oprnd2 else r",\s*"
+    ret += fr"{reg_re('rm')}\s*,\s*"
+    ret += '' if is_oprnd2 else r",\s*"
     ret += fr"(?P<shift>{group})\s+"
     ret += fr"(?:{reg_re(f'rs')}|{imm_re(f'b5')})" if is_oprnd2 else fr"{imm_re('b5')}"
 
@@ -211,7 +211,7 @@ oprnd2_re = (
     fr"(?P<lsr>{shift_re('lsr', True)})",
     fr"(?P<asr>{shift_re('asr', True)})",
     fr"(?P<ror>{shift_re('ror', True)})",
-    fr"(?P<rrx>{reg_re('rm')}\s+rrx)",
+    fr"(?P<rrx>{reg_re('rm')}\s*,\s*rrx)",
     fr"(?P<reg>{reg_re('rm')})",
     fr"(?P<imm>{imm_re('b12')})")
 
@@ -270,7 +270,7 @@ def opcode_re(opcode, has_cond, has_s):
     return fr"^{opcode}{cond}{s}$"
 
 def data_re(res):
-        return [r'^' + r"\s*,\s*".join(i) + r'$' for i in cart(res)]
+    return [r'^' + r"\s*,\s*".join(i) + r'$' for i in cart(res)]
 
 instruction_t = (
     (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
