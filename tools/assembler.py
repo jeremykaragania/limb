@@ -102,7 +102,7 @@ def enc_shift(groups):
 
 enc_oprnd2 = {
     "shift": lambda x: enc_shift(x),
-    "rrx": lambda x: ([], enc_reg[x.data["rm_reg"]]),
+    "rrx": lambda x: ([], 0b110 << 4 | enc_reg[x.data["rm_reg"]]),
     "reg": lambda x: ([], enc_reg[x.data["rm_reg"]]),
     "imm": lambda x: (check_size(int(x.data['b12_imm']), 4095), int(x.data['b12_imm']))
 }
@@ -110,7 +110,7 @@ enc_oprnd2 = {
 def enc_dpi(groups):
     cond = enc_cond(groups)
     oprnd2_type = list(groups.data)[-2]
-    i = 0 if oprnd2_type == "reg" else 1
+    i = 0 if oprnd2_type in ("reg", "shift") else 1
     opcode = opcode_t[groups.opcode["opcode"]]
     s = 0 if 's' not in groups.opcode else 1
     rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
