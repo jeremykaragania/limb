@@ -107,15 +107,32 @@ enc_oprnd2 = {
     "imm": lambda x: (check_size(int(x.data['b12_imm']), 4095), int(x.data['b12_imm']))
 }
 
+def oprnd2_type(groups):
+    if "shift" in groups.data:
+        return "shift"
+    elif "imm" in groups.data:
+        return "imm"
+    elif "rrx" in groups.data:
+        return "rrx"
+    else:
+        return "reg"
+
 def enc_dpi(groups):
     cond = enc_cond(groups)
-    oprnd2_type = list(groups.data)[-2]
-    i = 0 if oprnd2_type in ("reg", "shift") else 1
+    oprnd2_t = oprnd2_type(groups)
+
+    # Rewrite shifts as MOV (shifted register) instruction.
+    if groups.opcode["opcode"] in ("lsl", "lsr", "asr", "ror", "rrx"):
+        groups.data["shift"] = groups.opcode["opcode"]
+    elif groups.opcode["opcode"] == "rrx":
+        oprnd2_t = "rrx"
+
+    i = 0 if oprnd2_t in ("reg", "shift", "rrx") else 1
     opcode = opcode_t[groups.opcode["opcode"]]
     s = 0 if 's' not in groups.opcode else 1
     rn = enc_reg[groups.data["rn_reg"]] if "rn_reg" in groups.data else 0b0000
     rd = enc_reg[groups.data["rd_reg"]]
-    messages, oprnd2 = enc_oprnd2[oprnd2_type](groups)
+    messages, oprnd2 = enc_oprnd2[oprnd2_t](groups)
 
     return messages, cond << 28 | i << 25 | opcode << 21 | s << 20 | rn << 16 | rd << 12 | oprnd2
 
@@ -274,6 +291,8 @@ def data_re(res):
 
 instruction_t = (
     (instruction(opcode_re(("mov", "mvn"), True, True), data_re([[reg_re("rd")], oprnd2_re])), enc_dpi),
+    (instruction(opcode_re(("lsl", "lsr", "asr", "ror"), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs"), imm_re("b5")]])), enc_dpi),
+    (instruction(opcode_re(("rrx",), True, True), data_re([[reg_re("rd")], [reg_re("rm")]])), enc_dpi),
     (instruction(opcode_re(("add", "adc", "sub", "rsb", "rsc"), True, True), data_re([[reg_re("rd")], [reg_re("rn")], oprnd2_re])), enc_dpi),
     (instruction(opcode_re(("mul",), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")]])), enc_mi),
     (instruction(opcode_re(("mla",), True, True), data_re([[reg_re("rd")], [reg_re("rm")], [reg_re("rs")], [reg_re("rn")]])), enc_mi),
