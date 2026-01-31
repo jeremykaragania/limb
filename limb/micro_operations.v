@@ -12,6 +12,6 @@
 // UOP bit positions.
 `define UOP_VALID_B     63
 `define UOP_CLASS_MSB   62
-`define UOP_CLASS_LSB   61
+`define UOP_CLASS_LSB   59
 
 `endif

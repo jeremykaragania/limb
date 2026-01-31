@@ -134,7 +134,7 @@ module instruction_decode (
       d = rr4_i;
       type = instr_i[23:21];
     end
-    else if (instr_i[27:26] == 2'b00) begin // Data processing instruction.
+    else if (instr_i[27:26] == 2'b00) begin // Data processing or miscellaneous instruction.
       uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER;
       e_do_cycle = 1'b1;
       e_oprnd2_t = instr_i[25];
@@ -176,6 +176,14 @@ module instruction_decode (
         e_write_dest_do = 1'b1;
         e_write_dest_m = 1'b0;
         e_write_cpsr = 1'b0;
+      end
+    end
+    else if (instr_i[27:25] == 4'b011) begin // Load or store word and unsigned byte instruction.
+      if (dp_opcode[0]) begin // Load.
+        uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_LOAD;
+      end
+      else begin // Store.
+        uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_STORE;
       end
     end
     else begin
