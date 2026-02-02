@@ -40,4 +40,10 @@
 `define COND_LE 4'b1101
 `define COND_AL 4'b1110
 
+// Shifts.
+`define SHIFT_LSL 2'b00
+`define SHIFT_LSR 2'b01
+`define SHIFT_ASR 2'b10
+`define SHIFT_ROR 2'b11
+
 `endif
