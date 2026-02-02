@@ -1,6 +1,8 @@
 `ifndef INSTRUCTION_EXECUTE_V
 `define INSTRUCTION_EXECUTE_V
 
+`include "instructions.v"
+
 module instruction_execute (
   input clk,
   input rst,
@@ -106,64 +108,64 @@ module arithmetic_logic_unit (
     end
     else begin
       case (opcode)
-        4'b1101: begin // MOV
+        `OP_MOV: begin
           result <= b;
         end
-        4'b1111: begin // MVN
+        `OP_MVN: begin
           result <= ~b;
         end
-        4'b0100: begin // ADD
+        `OP_ADD: begin
           result <= a + b;
         end
-        4'b0101: begin // ADC
+        `OP_ADC: begin
           result <= a + b + cpsr[29];
         end
-        4'b0010: begin // SUB
+        `OP_SUB: begin
           result <= a - b;
         end
-        4'b0110: begin // SBC
+        `OP_SBC: begin
           result <= a - b - cpsr[29];
         end
-        4'b0011: begin // RSB
+        `OP_RSB: begin
           result <= b - a;
         end
-        4'b0111: begin // RSC
+        `OP_RSC: begin
           result <= b - a - cpsr[29];
         end
-        4'b1010: begin // CMP
+        `OP_CMP: begin
           result[31] <= ($unsigned(a) + $unsigned(~b) + $unsigned(1)) >> 32'd31;
           result[30] <= !(a + ~b + 32'b1);
           result[29] <= $unsigned((a + ~b + 32'b1) >> 32'b1) != (a + ~b + 32'b1);
           result[28] <= $signed((a + ~b + 32'b1) >> 32'b1) != ($signed(a) + $signed(~b) + $unsigned(32'b1));
           result[27:0] <= cpsr[27:0];
         end
-        4'b1011: begin // CMN
+        `OP_CMN: begin
           result[31] <= ($unsigned(a) + $unsigned(b) + $unsigned(1)) >> 32'd31;
           result[30] <= !(a + ~b + 32'b1);
           result[29] <= $unsigned((a + b + 32'b1) >> 32'b1) != (a + b + 32'b1);
           result[28] <= $signed((a + b + 32'b1) >> 32'b1) != ($signed(a) + $signed(b) + $unsigned(32'b1));
           result[27:0] <= cpsr[27:0];
         end
-        4'b1000: begin // TST
+        `OP_TST: begin
           result[31] <= (a & b) >> 32'd31;
           result[30] <= !(a & b);
           result[29:0] <= cpsr[29:0];
         end
-        4'b1001: begin // TEQ
+        `OP_TEQ: begin
           result[31] <= (a ^ b) >> 32'd31;
           result[30] <= !(a & b);
           result[29:0] <= cpsr[29:0];
         end
-        4'b0000: begin // AND
+        `OP_AND: begin
           result <= a & b;
         end
-        4'b0001: begin // EOR
+        `OP_EOR: begin
           result <= a ^ b;
         end
-        4'b1100: begin // ORR
+        `OP_ORR: begin
           result <= a | b;
         end
-        4'b1110: begin // BIC
+        `OP_BIC: begin
           result <= a & ~b;
         end
       endcase

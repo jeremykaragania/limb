@@ -1,9 +1,9 @@
 `ifndef INSTRUCTION_DECODE_V
 `define INSTRUCTION_DECODE_V
 
+`include "instructions.v"
 `include "micro_operations.v"
 
-`define AL 4'b1110
 `define NOP 28'b0011001000001111000000000000
 
 module instruction_decode (
@@ -168,7 +168,7 @@ module instruction_decode (
 
       e_dest = instr_i[15:12];
 
-      if (dp_opcode == 4'b1010 || dp_opcode == 4'b1011 || dp_opcode == 4'b1000 || dp_opcode == 4'b1001) begin
+      if (dp_opcode == `OP_CMP || dp_opcode == `OP_CMN || dp_opcode == `OP_TST || dp_opcode == `OP_TEQ) begin
         e_write_dest_do = 1'b1;
         e_write_dest_m = 1'b0;
         e_write_cpsr = 1'b1;
@@ -195,77 +195,77 @@ module instruction_decode (
     end
 
     case (cond)
-      4'b0000: begin // EQ
+      `COND_EQ: begin
         if (cpsr[30]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0001: begin // NE
+      `COND_NE: begin
         if (!cpsr[30]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0010: begin // CS
+      `COND_CS: begin
         if (cpsr[29]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0011: begin // CC
+      `COND_CC: begin
         if (!cpsr[29]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0100: begin // MI
+      `COND_MI: begin
         if (cpsr[31]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0101: begin // PL
+      `COND_PL: begin
         if (!cpsr[31]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0110: begin // VS
+      `COND_VS: begin
         if (cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b0111: begin // VC
+      `COND_VC: begin
         if (!cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1000: begin // HI
+      `COND_HI: begin
         if (cpsr[29] || !cpsr[30]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1001: begin // LS
+      `COND_LS: begin
         if (!cpsr[29] || cpsr[30]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1010: begin // GE
+      `COND_GE: begin
         if (cpsr[31] == cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1011: begin // LT
+      `COND_LT: begin
         if (cpsr[31] != cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1100: begin // GT
+      `COND_GT: begin
         if (!cpsr[28] || cpsr[31] == cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1101: begin // LE
+      `COND_LE: begin
         if (cpsr[28] || cpsr[31] != cpsr[28]) begin
           e_exec = 1'b1;
         end
       end
-      4'b1110: begin // AL
+      `COND_AL: begin
         e_exec = 1'b1;
       end
     endcase
