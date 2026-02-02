@@ -157,6 +157,9 @@ module processor (
   wire [2:0] type_w;
   wire [63:0] m_result_w;
 
+  // Just for now, pin high.
+  reg instr_valid_r = 1'b1;
+
   register_file rf_m (
     .clk(clk),
     .rst(rst),
@@ -189,6 +192,7 @@ module processor (
     .clk(clk),
     .rst(rst),
 
+    .instr_valid_i(instr_valid_r),
     .instr_i(instr_f_w),
 
     .result_i(result_w),

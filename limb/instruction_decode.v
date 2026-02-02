@@ -10,6 +10,7 @@ module instruction_decode (
   input clk,
   input rst,
 
+  input instr_valid_i,
   input [31:0] instr_i,
 
   input [31:0] result_i,
