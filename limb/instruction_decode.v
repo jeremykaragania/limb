@@ -56,7 +56,7 @@ module instruction_decode (
   wire [3:0] dp_opcode = instr_i[24:21];
   wire [3:0] dp_rn = instr_i[19:16];
   wire [3:0] dp_rd = instr_i[15:12];
-  wire [3:0] dp_oprnd_2 = instr_i[11:0];
+  wire [11:0] dp_oprnd_2 = instr_i[11:0];
 
   // Multiply.
   wire [3:0] m_rd = instr_i[19:16];
