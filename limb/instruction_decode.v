@@ -4,8 +4,6 @@
 `include "instructions.v"
 `include "micro_operations.v"
 
-`define NOP 28'b0011001000001111000000000000
-
 module instruction_decode (
   input clk,
   input rst,
@@ -118,13 +116,7 @@ module instruction_decode (
       uop_o = 64'b0;
       uop_o[`UOP_COND_MSB:`UOP_COND_LSB] = cond;
 
-      if (instr_i[27:0] == `NOP) begin // No operation.
-        e_do_cycle = 1'b0;
-        e_write_dest_do = 1'b0;
-        e_write_dest_m = 1'b0;
-        e_write_cpsr = 1'b0;
-      end
-      else if (!instr_i[25] && instr_i[7] && instr_i[4]) begin // Multiply or multiply accumulate.
+      if (!instr_i[25] && instr_i[7] && instr_i[4]) begin // Multiply or multiply accumulate.
         uop_o[`UOP_VALID_B] = 1'b1;
         uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER_M;
 
@@ -148,7 +140,7 @@ module instruction_decode (
         uop_o[`UOP_VALID_B] = 1'b1;
 
         if (instr_i[25]) begin
-          if (!instr_i[24] || instr_i[23] || instr_i[20]) begin // Immediate.
+          if (!instr_i[24] || instr_i[23] || instr_i[20]) begin // Data processing (immediate).
             uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER;
             uop_o[`UOP_I_TYPE_MSB:`UOP_I_TYPE_LSB] = `UOP_IMM;
             uop_o[`UOP_I_IMM_12_MSB:`UOP_I_IMM_12_LSB] = dp_oprnd_2;
@@ -161,9 +153,25 @@ module instruction_decode (
               uop_o[`UOP_I_DST_0_VALID_B] = 1'b1;
             end
           end
+          else if (instr_i[24] && !instr_i[23] && instr_i[21] && !instr_i[20]) begin // MSR (immediate), and hints.
+            if (instr_i[22]) begin // MSR (immediate).
+            end
+            else begin
+              if (instr_i[19:16] == 4'b0) begin
+                case (instr_i[7:0])
+                  8'b00000000: begin // NOP.
+                    e_do_cycle = 1'b0;
+                    e_write_dest_do = 1'b0;
+                    e_write_dest_m = 1'b0;
+                    e_write_cpsr = 1'b0;
+                  end
+                endcase
+              end
+            end
+          end
         end
         else begin
-          if ((!instr_i[24] || instr_i[23] || instr_i[20]) && !instr_i[4]) begin // Register.
+          if ((!instr_i[24] || instr_i[23] || instr_i[20]) && !instr_i[4]) begin // Data processing (register).
             uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER_M;
 
             case (dp_shift_type)
