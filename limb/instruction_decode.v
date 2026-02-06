@@ -116,27 +116,7 @@ module instruction_decode (
       uop_o = 64'b0;
       uop_o[`UOP_COND_MSB:`UOP_COND_LSB] = cond;
 
-      if (!instr_i[25] && instr_i[7] && instr_i[4]) begin // Multiply or multiply accumulate.
-        uop_o[`UOP_VALID_B] = 1'b1;
-        uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER_M;
-
-        e_do_cycle = 1'b0;
-        e_m_ma_cycle = 1'b1;
-        e_dest = m_rd;
-        e_write_dest_do = 1'b0;
-        e_write_dest_m = !instr_i[23];
-        e_write_cpsr = 1'b0;
-        rr1_i_o = m_rm;
-        rr2_i_o = m_rs;
-        rr3_i_o = m_rd;
-        rr4_i_o = m_rn;
-        a = rr1_i;
-        b = rr2_i;
-        c = rr3_i;
-        d = rr4_i;
-        type = instr_i[23:21];
-      end
-      else if (instr_i[27:26] == 2'b00) begin // Data processing or miscellaneous instruction.
+      if (instr_i[27:26] == 2'b00) begin // Data processing or miscellaneous instruction.
         uop_o[`UOP_VALID_B] = 1'b1;
 
         if (instr_i[25]) begin
@@ -238,6 +218,26 @@ module instruction_decode (
               uop_o[`UOP_I_DST_0_MSB:`UOP_I_DST_0_LSB] = dp_rd;
               uop_o[`UOP_I_DST_0_VALID_B] = 1'b1;
             end
+          end
+          else if (!instr_i[24] && instr_i[7:4] == 4'b1001) begin // Multiply and multiply accumulate.
+            uop_o[`UOP_VALID_B] = 1'b1;
+            uop_o[`UOP_CLASS_MSB:`UOP_CLASS_LSB] = `UOP_INTEGER_M;
+
+            e_do_cycle = 1'b0;
+            e_m_ma_cycle = 1'b1;
+            e_dest = m_rd;
+            e_write_dest_do = 1'b0;
+            e_write_dest_m = !instr_i[23];
+            e_write_cpsr = 1'b0;
+            rr1_i_o = m_rm;
+            rr2_i_o = m_rs;
+            rr3_i_o = m_rd;
+            rr4_i_o = m_rn;
+            a = rr1_i;
+            b = rr2_i;
+            c = rr3_i;
+            d = rr4_i;
+            type = instr_i[23:21];
           end
         end
 
