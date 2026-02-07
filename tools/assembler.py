@@ -49,6 +49,7 @@ cond_t = {
     "al": 0b1110
 }
 
+# check_size checks the size of the immediate `x` is less than the size `size.
 def check_size(x, size):
     if (x > size):
         return [assembler_message(None, None, "Error", f"invalid constant {(hex(x))} after fixup")]
@@ -59,6 +60,7 @@ enc_cond = lambda groups: cond_t[groups.opcode["cond"]] if "cond" in groups.opco
 
 enc_reg = {str(i):i for i in range(14)}
 
+# enc_a_mode2 encodes addressing mode 2 operands.
 def enc_a_mode2(groups):
     if "b12_imm" in groups.data:
         offset = int(groups.data['b12_imm'])
@@ -70,6 +72,7 @@ def enc_a_mode2(groups):
         rm = enc_reg[groups.data["rm_reg"]]
         return [], rm
 
+# enc_a_mode3 encodes addressing mode 3 operands.
 def enc_a_mode3(groups):
     if "b8_imm" in groups.data:
         imm = f"{int(groups.data['b8_imm']):0>8b}"
@@ -78,6 +81,7 @@ def enc_a_mode3(groups):
         rm = enc_reg[groups.data["rm_reg"]]
         return [], ("0000", rm)
 
+# enc_shift encodes shift operands.
 def enc_shift(groups):
     messages = []
     ret = 0
@@ -107,6 +111,7 @@ enc_oprnd2 = {
     "imm": lambda x: (check_size(int(x.data['b12_imm']), 4095), int(x.data['b12_imm']))
 }
 
+# oprnd2_type returns the type of the second operand based on regex groups.
 def oprnd2_type(groups):
     if "shift" in groups.data:
         return "shift"
@@ -117,6 +122,7 @@ def oprnd2_type(groups):
     else:
         return "reg"
 
+# enc_dpi encodes data processing instructions.
 def enc_dpi(groups):
     cond = enc_cond(groups)
     oprnd2_t = oprnd2_type(groups)
@@ -136,6 +142,7 @@ def enc_dpi(groups):
 
     return messages, cond << 28 | i << 25 | opcode << 21 | s << 20 | rn << 16 | rd << 12 | oprnd2
 
+# enc_mi encodes multiply instructions.
 def enc_mi(groups):
     cond = enc_cond(groups)
     a = 0 if groups.opcode["opcode"][1] == "u" else 1
@@ -147,6 +154,7 @@ def enc_mi(groups):
 
     return [], cond << 28 | a << 21 | s << 20 | rd << 16 | rn << 12 | rs << 8 | 0b1001 << 4 | rm
 
+# enc_mli encodes multiply long instructions.
 def enc_mli(groups):
     cond = enc_cond(groups)
     u = 0 if 's' == groups.opcode["opcode"][0] else 1
@@ -159,12 +167,14 @@ def enc_mli(groups):
 
     return [], cond << 28 | 1 << 23 | u << 22 | a << 21 | s << 20 | rd_hi << 16 | rd_lo << 12 | rn << 8 | 0b1001 << 4 | rm
 
+# enc_bei encodes branch and exchange instructions.
 def enc_bei(groups):
     cond = enc_cond(groups)
     rn = enc_reg[groups.data["rn_reg"]]
 
     return [], cond << 28 | 0b000100101111111111110001 << 4 | rn
 
+# enc_bei encodes half word data transfer instructions.
 def enc_hdt(groups):
     cond = enc_cond(groups)
     p = '0' if "post" in groups.data else '1'
@@ -180,6 +190,7 @@ def enc_hdt(groups):
 
     return [], cond + "000" + p + u + i + w + l + rn + rd + a_mode3[0] + '1' + s + h + '1' + a_mode3[1]
 
+# enc_bei encodes single word data transfer instructions.
 def enc_sdt(groups):
     cond = enc_cond(groups)
     p = 0 if "post" in groups.data else 1
@@ -193,6 +204,7 @@ def enc_sdt(groups):
 
     return messages, cond << 28 | 0b011 << 25 | p << 24 | u << 23 | b << 22 | w << 21 | l << 20 | rn << 16 | rd << 12 | a_mode
 
+# enc_bi encodes branch instructions.
 def enc_bi(groups):
     cond = enc_cond(groups)
     l = 0 if groups.opcode["opcode"] == "b" else 1
@@ -200,6 +212,7 @@ def enc_bi(groups):
 
     return [], cond << 28 | 0b101 << 25 | l << 24 | offset
 
+# enc_nop encodes no operation instructions.
 def enc_nop(groups):
     cond = enc_cond(groups)
     return [], cond << 28 | 0b0011001000001111000000000000
@@ -214,6 +227,7 @@ reg_re = lambda group: fr"r(?P<{group}_reg>{'|'.join([str(i) for i in range(16)]
 
 sign_re = fr"(?P<sign>[+|-]\s*)?"
 
+# shift_re returns the regex pattern for shift operands.
 def shift_re(group, is_oprnd2):
     ret = '' if is_oprnd2 else sign_re
     ret += fr"{reg_re('rm')}\s*,\s*"
@@ -256,6 +270,7 @@ a_mode3_re = (
     a_mode2_re[8]
 )
 
+# cart returns the Carteisan product of a list of lists.
 def cart(x):
     if len(x) == 1:
         return x
@@ -279,6 +294,7 @@ def cart(x):
         else:
             return ret
 
+# opcode_re returns the regex pattern for opcodes.
 def opcode_re(opcode, has_cond, has_s):
     opcode = fr"(?P<opcode>{'|'.join(opcode)})"
     cond = condition_re if has_cond else ''
@@ -286,6 +302,7 @@ def opcode_re(opcode, has_cond, has_s):
 
     return fr"^{opcode}{cond}{s}$"
 
+# data_re returns the regex pattern for an instruction's data.
 def data_re(res):
     return [r'^' + r"\s*,\s*".join(i) + r'$' for i in cart(res)]
 
