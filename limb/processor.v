@@ -1,6 +1,7 @@
-`include "instruction_fetch.v"
+`include "instruction_cache.v"
 `include "instruction_decode.v"
 `include "instruction_execute.v"
+`include "instruction_fetch.v"
 `include "write_back.v"
 
 module memory_controller (
@@ -129,6 +130,10 @@ module processor (
   wire [31:0] instr_f_w;
   wire [31:0] pc_w;
 
+  // Instruction cache.
+  wire instrs_valid_w;
+  wire [1:0] instrs_count_w;
+
   // Instruction decode.
   wire e_exec_w;
   wire [11:0] e_oprnd2_w;
@@ -187,6 +192,21 @@ module processor (
 
     .pc_o(addr),
     .instr_o(instr_f_w));
+
+  l1_instruction_cache ic_m (
+    .clk(clk),
+    .rst(rst),
+    .addr(pc_w),
+    .data(rdata),
+    .data_valid(data_valid),
+    .trans(trans),
+    .write(write),
+    .req_addr(addr),
+    .instrs_valid_o(instrs_valid_w),
+    .instrs_count_o(instrs_count_w),
+    .instrs_o(instrs_w),
+    .stall_o(if_stall_w)
+  );
 
   instruction_decode id_m (
     .clk(clk),
