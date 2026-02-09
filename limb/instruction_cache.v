@@ -23,7 +23,7 @@ module l1_instruction_cache (
   output reg stall_o,
   output reg instrs_valid_o,
   output reg [1:0] instrs_count_o,
-  output reg [95:0] instrs_o);
+  output reg [2:0][31:0] instrs_o);
 
   // Way data lines.
   reg [511:0] way_data [0:1][0:255];
