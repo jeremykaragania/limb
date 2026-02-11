@@ -51,4 +51,16 @@
 `define UOP_I_IMM_12_MSB      38    // Immediate register (valid if immediate type).
 `define UOP_I_IMM_12_LSB      27
 
+`define UOP_I_DST_P_0_MSB     26    // Physical destination register.
+`define UOP_I_DST_P_0_LSB     21
+
+`define UOP_I_SRC_P_0_MSB     20    // Physical source register 1.
+`define UOP_I_SRC_P_0_LSB     15
+
+`define UOP_I_SRC_P_1_MSB     14    // Physical source register 2.
+`define UOP_I_SRC_P_1_LSB     9
+
+`define UOP_I_SRC_P_2_MSB     8     // Physical source register 3.
+`define UOP_I_SRC_P_2_LSB     3
+
 `endif
