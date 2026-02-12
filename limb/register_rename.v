@@ -3,6 +3,24 @@
 
 `include "micro_operations.v"
 
+module remap_file (
+  input clk,
+  input rst);
+
+  reg [5:0] map [0:14];
+
+  integer i;
+
+  always @ (posedge clk) begin
+    if (rst) begin
+      for (i = 0; i < 15; ++i) begin
+        map[i] = i;
+      end
+    end
+  end
+
+endmodule
+
 module register_rename (
   input clk,
   input rst,
