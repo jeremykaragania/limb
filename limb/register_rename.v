@@ -5,17 +5,24 @@
 
 module remap_file (
   input clk,
-  input rst);
+  input rst,
+
+  input [3:0] reg_i,
+  output reg [5:0] tag_o
+  );
 
   reg [5:0] map [0:14];
 
   integer i;
 
-  always @ (posedge clk) begin
+  always @ (*) begin
     if (rst) begin
       for (i = 0; i < 15; ++i) begin
         map[i] = i;
       end
+    end
+    else begin
+      tag_o = map[reg_i];
     end
   end
 
