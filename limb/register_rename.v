@@ -7,8 +7,13 @@ module remap_file (
   input clk,
   input rst,
 
-  input [3:0] reg_i,
-  output reg [5:0] tag_o
+  input [3:0] reg_0_i,
+  input [3:0] reg_1_i,
+  input [3:0] reg_2_i,
+
+  output reg [5:0] tag_0_o,
+  output reg [5:0] tag_1_o,
+  output reg [5:0] tag_2_o
   );
 
   reg [5:0] map [0:14];
@@ -22,7 +27,9 @@ module remap_file (
       end
     end
     else begin
-      tag_o = map[reg_i];
+      tag_0_o = map[reg_0_i];
+      tag_1_o = map[reg_1_i];
+      tag_2_o = map[reg_2_i];
     end
   end
 
